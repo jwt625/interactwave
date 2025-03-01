@@ -50,7 +50,11 @@ This will start a local server to preview the production build.
 
 $$
 \begin{bmatrix}
-X_0 \\ \vdots\\ X_i \\ \vdots \\ X_{N-1}
+X_0 \\ 
+\vdots\\ 
+X_i \\ 
+\vdots \\ 
+X_{N-1}
 \end{bmatrix}
 =\begin{bmatrix}
 W_N^0 & \ldots & W_N^0 & \ldots & W_N^0 \\
@@ -60,7 +64,11 @@ W_N^0 & \ldots & W_N^{ij} & \ldots & W_N^{-i} \\
 W_N^0 & \ldots & W_N^{-j} & \ldots & W_N^1 \\
 \end{bmatrix}
 \begin{bmatrix}
-x_0 \\ \vdots\\ x_j \\ \vdots \\ x_{N-1}
+x_0 \\ 
+\vdots\\ 
+x_j \\ 
+\vdots \\ 
+x_{N-1}
 \end{bmatrix}
 $$
 
@@ -121,14 +129,20 @@ First, we compute:
 
 $$
 A_m = \sum_{n=0}^{N/2-1} W_N^{2mn}x_{2n}
-\\ B_m = W_N^m \sum_{n=0}^{N/2-1} W_N^{2mn}x_{2n+1}
+$$
+
+$$
+B_m = W_N^m \sum_{n=0}^{N/2-1} W_N^{2mn}x_{2n+1}
 $$
 
 Then we have:
 
 $$
 X_{m} = A_m + B_m
-\\ X_{m+N/2} = A_m - B_m
+$$
+
+$$
+X_{m+N/2} = A_m - B_m
 $$
 
 $A_m$ is a smaller FFT, with only half the size, so does $B_m$ but need to multiply by a factor $W_{N}^m$:
