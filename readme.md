@@ -52,8 +52,7 @@ $$
 \begin{bmatrix}
 X_0 \\ \vdots\\ X_i \\ \vdots \\ X_{N-1}
 \end{bmatrix}
-=
-\begin{bmatrix}
+=\begin{bmatrix}
 W_N^0 & \ldots & W_N^0 & \ldots & W_N^0 \\
 \vdots & \ddots & \vdots & \ddots & \vdots \\
 W_N^0 & \ldots & W_N^{ij} & \ldots & W_N^{-i} \\
