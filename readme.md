@@ -52,8 +52,7 @@ $$
 \begin{bmatrix}
 X_0 \\ \vdots\\ X_i \\ \vdots \\ X_{N-1}
 \end{bmatrix}
-=
-\begin{bmatrix}
+=\begin{bmatrix}
 W_N^0 & \ldots & W_N^0 & \ldots & W_N^0 \\
 \vdots & \ddots & \vdots & \ddots & \vdots \\
 W_N^0 & \ldots & W_N^{ij} & \ldots & W_N^{-i} \\
@@ -90,15 +89,16 @@ And isolate rows with $i=m$ and $i=m+N/2$
 $m=0, 1, \ldots, N/2-1$
 
 case 1
+
 $$
 X_m = \sum W_N^{2mn}x_{2n} + \sum W_N^{m(2n+1)}x_{2n+1}
 $$
 
- case 2
+case 2
+ 
 $$
 X_{m+N/2} = \sum W_N^{(m+N/2)2n}x_{2n} + \sum W_N^{(m+N/2)(2n+1)}x_{2n+1}
-\\
-= \sum W_N^{2mn+nN}x_{2n} + \sum W_N^{m(2n+1)+nN+N/2}x_{2n+1}
+\\ = \sum W_N^{2mn+nN}x_{2n} + \sum W_N^{m(2n+1)+nN+N/2}x_{2n+1}
 $$
 
 ### Compare similar terms in both cases:
@@ -118,22 +118,23 @@ $$
 ### Recursive rule
 
 First, we compute:
+
 $$
 A_m = \sum_{n=0}^{N/2-1} W_N^{2mn}x_{2n}
-\\
-B_m = W_N^m \sum_{n=0}^{N/2-1} W_N^{2mn}x_{2n+1}
+\\ B_m = W_N^m \sum_{n=0}^{N/2-1} W_N^{2mn}x_{2n+1}
 $$
 
 Then we have:
+
 $$
 X_{m} = A_m + B_m
-\\
-X_{m+N/2} = A_m - B_m
+\\ X_{m+N/2} = A_m - B_m
 $$
 
 $A_m$ is a smaller FFT, with only half the size, so does $B_m$ but need to multiply by a factor $W_{N}^m$:
 
 let $i'=m,j'=n, N'=N/2$
+
 $$
 A_{i'}= \sum_{j'=0}^{N'-1} W_{N'}^{i'j'}x_{2i'}
 $$
