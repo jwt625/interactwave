@@ -164,8 +164,8 @@ window.addEventListener('mousemove', (event) => {
 window.addEventListener('mousedown', (event) => {
     m_down = true
     const rect = regl._gl.canvas.getBoundingClientRect()
-    mx = (event.clientX - rect.left) / rect.width
-    my = 1 - (event.clientY - rect.top) / rect.height
+    mpx=mx = (event.clientX - rect.left) / rect.width
+    mpy=my = 1 - (event.clientY - rect.top) / rect.height
     // mx = mdx
     // my = mdy
 })
@@ -184,8 +184,8 @@ function handleTouchStart(e) {
     e.preventDefault();
     m_down = true;
     const rect = canvas.getBoundingClientRect();
-    mx = (e.touches[0].clientX - rect.left) / rect.width;
-    my = 1 - (e.touches[0].clientY - rect.top) / rect.height;
+    mpx=mx = (e.touches[0].clientX - rect.left) / rect.width;
+    mpy=my = 1 - (e.touches[0].clientY - rect.top) / rect.height;
 }
 
 function handleTouchMove(e) {
