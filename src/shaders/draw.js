@@ -12,6 +12,7 @@ const draw = regl({
         textureG: regl.prop('textureG'),
         textureB: regl.prop('textureB'),
         phase: regl.prop('phase'),
+        colormode: regl.prop('colormode'),
     },
     count: 6
 })

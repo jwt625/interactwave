@@ -71,12 +71,12 @@ function update_overlay(width, power, domain_size){
     let z2 = z+1
     let w2 = Math.sqrt(wl/Math.PI) * Math.sqrt((zr**2+z2**2)/zr)
     let c2 = z2/(z2**2+zr**2)
-    draw_arc((z2-z)*s, Math.max(10, w2*s), c2/s, 'dash')
+    draw_arc((z2-z)*s, Math.min(Math.max(1, w2), domain_size/2-1)*s, c2/s, 'dash')
 
     z2 = z+domain_size-1
     w2 = Math.sqrt(wl/Math.PI) * Math.sqrt((zr**2+z2**2)/zr)
     c2 = z2/(z2**2+zr**2)
-    draw_arc((z2-z)*s, Math.max(10, w2*s), c2/s, 'dash')
+    draw_arc((z2-z)*s, Math.min(Math.max(1, w2), domain_size/2-1)*s, c2/s, 'dash')
 
     let z2_1 = z+domain_size-2
     let z2_2 = z+2
@@ -90,7 +90,7 @@ function update_overlay(width, power, domain_size){
     z2 = (1-f)*z2 + f*z2_2
     w2 = Math.sqrt(wl/Math.PI) * Math.sqrt((zr**2+z2**2)/zr)
     c2 = z2/(z2**2+zr**2)
-    draw_arc((z2-z)*s, Math.max(1, w2*s), c2/s)
+    draw_arc((z2-z)*s, Math.min(Math.max(1, w2), domain_size/2-2)*s, c2/s)
     console.log((z2-z)*s)
 
 }

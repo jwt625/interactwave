@@ -67,8 +67,9 @@ let mpy = 0
 
 
 const parameters = {
-    width: new SmoothVar(0.2, domain_size/N*2, 1.0),
+    width: new SmoothVar(0.2, domain_size/N*2, 0.7),
     power: new SmoothVar(0.1, -1/5, 1/5),
+    colormode: new SmoothVar(1, 0, 1)
 }
 
 let phase = 0
@@ -128,7 +129,8 @@ function update() {
         textureR: rgb_fbos_mag[0].color[0],
         textureG: rgb_fbos_mag[1].color[0],
         textureB: rgb_fbos_mag[2].color[0],
-        phase: phase
+        phase: phase,
+        colormode: parameters.colormode.value
     })
 
 
@@ -140,18 +142,23 @@ function update() {
 
     // update for mouse movement
 
-    mdx = mx - mpx
+    mdx = mx - mpx  
     mdy = my - mpy
 
     if (m_down) {
-        parameters.width.update_add(mdx * 0.7)
-        parameters.power.update_add(mdy * -0.5)
+        parameters.width.add(mdx * 0.7)
+        parameters.power.add(mdy * -0.4)
+    }
+    for(let i in parameters){
+        parameters[i].update()
     }
 
     mpx = mx
     mpy = my
 
     update_overlay(parameters.width.value, parameters.power.value, domain_size)
+
+    
 }
 
 
@@ -206,5 +213,9 @@ function handleTouchEnd(e) {
 
 
 window.regl = regl
+
+document.getElementById('toggleButton').addEventListener('click', function(){
+    parameters.colormode.set(1-parameters.colormode.target)
+})
 
 export { update }

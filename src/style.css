@@ -5,7 +5,7 @@
 
   color-scheme: light dark;
   color: rgba(255, 255, 255, 0.87);
-  background-color: black;
+  background-color: rgb(222, 222, 222);
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;
@@ -15,8 +15,16 @@
 
 #canvas{
   position: relative;
+
+  box-sizing: border-box;
 }
 
+
+canvas{
+  border-radius: 12px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1), 
+              0 1px 3px rgba(0, 0, 0, 0.08);
+}
 .container{
   max-width: 512px;
   margin: auto;
@@ -24,12 +32,59 @@
 
 .overlay{
   position: absolute;
-  pointer-events: none;
   width: 100%;
   height: 100%;
+  pointer-events: none;
 }
+
 
 svg{
   width: 100%;
   height: 100%;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-weight: 600;
+  margin: 0 0 10px;
+  color: #333;
+}
+
+p {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-weight: 400;
+  margin: 0 0 15px;
+  color: #666;
+  line-height: 1.6;
+}
+
+a {
+  color: #007aff;
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+ul, ol {
+  margin: 0 0 15px 25px;
+  padding: 0;
+}
+
+li {
+  margin: 0 0 5px;
+}
+
+blockquote {
+  margin: 0 0 15px;
+  padding: 10px 20px;
+  background-color: #f9f9f9;
+  border-left: 5px solid #ccc;
+  color: #666;
+  font-style: italic;
+}
+
+#toggleButton{
+  margin-bottom: 10px;
 }

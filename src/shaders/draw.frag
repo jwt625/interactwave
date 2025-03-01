@@ -4,6 +4,7 @@ uniform float phase;
 uniform sampler2D textureR;
 uniform sampler2D textureG;
 uniform sampler2D textureB;
+uniform float colormode;
 
 #include ./utils/pack.frag
 #include ./utils/colormap.frag
@@ -34,7 +35,7 @@ void main(){
     ); 
 
 
-    vec4 color = colormap(x.y*7.0);
+    vec4 color = colormap(x.x*10.0);
 
     vec3 rgb = vec3(
         pow(xr.x*xr.x+xr.y*xr.y, gamma), 
@@ -42,7 +43,8 @@ void main(){
         pow(xb.x*xb.x+xb.y*xb.y, gamma)
     )*10.0;
 
-    color = vec4(rgb, 1);
+    color = mix(color, vec4(rgb, 1), colormode);
+
     // color = color * step(0.0, uv.x-0.5);
     gl_FragColor = color;
 }

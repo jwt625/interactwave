@@ -6,14 +6,17 @@ function SmoothVar(value, min, max){
 
     let self = this
     
-    this.update = function(value){
+    this.set = function(value){
         self.target = Math.max(self.min, value)
         self.target = Math.min(self.max, self.target)
-        self.value += (self.target - self.value) * 0.2
     }
 
-    this.update_add = function(delta){
-        self.update(self.target + delta)
+    this.add = function(delta){
+        self.set(self.target + delta)
+    }
+
+    this.update = function(){
+        self.value += (self.target - self.value) * 0.2
     }
 }
 
