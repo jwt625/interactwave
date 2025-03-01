@@ -1,0 +1,172 @@
+import { regl } from './render'
+import { draw } from './shaders/draw'
+import { FFT } from './shaders/fft'
+import { WPM } from './shaders/wpm'
+import { SHAPE } from './shaders/shape'
+import { sample } from './shaders/sample'
+import { SmoothVar } from './smoothvar'
+// FFT domain
+const levels = 9
+const N = 2 ** levels
+const NH = Math.round(N / 4)
+
+// resize 
+regl._gl.canvas.width = N
+regl._gl.canvas.height = N
+
+
+const domain_size = 15
+const dx = domain_size / N
+const dz = domain_size / NH
+
+let temp_fbo = regl.framebuffer({
+    color: [
+        // regl.texture({ type: "float", width: N, height: NH, format: "rgba"}),
+        regl.texture({ width: N, height: NH, format: "rgba" }),
+    ]
+})
+
+
+const rgb_fbos = ['r', 'g', 'b'].map(x => regl.framebuffer({
+    color: [
+        // regl.texture({ type: "float", width: N, height: NH, format: "rgba"}),
+        regl.texture({ width: N, height: NH, format: "rgba" }),
+    ]
+}))
+
+const rgb_fbos_mag = ['r', 'g', 'b'].map(x => regl.framebuffer({
+    color: [
+        // regl.texture({ type: "float", width: N, height: NH, format: "rgba"}),
+        regl.texture({ width: N, height: NH, format: "rgba", mag: "linear" }),
+    ]
+}))
+
+const output_fbos = regl.framebuffer({
+    color: [
+        regl.texture({ width: N, height: NH, format: "rgba", mag: "linear" }),
+    ]
+})
+
+// Main loop
+rgb_fbos.map(x => x.use(function () {
+    regl.clear({
+        color: [0, 0, 0, 0],
+        depth: 1,
+    })
+}))
+
+
+let mx = 0
+let my = 0
+let m_down = false
+let mdx = 0
+let mdy = 0
+let mpx = 0
+let mpy = 0
+
+
+const parameters = {
+    width: new SmoothVar(0.2, 0.01, 0.5),
+    power: new SmoothVar(0, -1000, 1000),
+}
+
+let phase = 0
+
+function update() {
+    regl.poll()
+
+    regl.clear({
+        color: [0, 0, 0, 1],
+    })
+
+    for (let i = 0; i < 3; i++) {
+        // WPM
+        const wavelength = [0.63, 0.532, 0.47][i]
+        const k0 = Math.PI * 2 / wavelength
+
+
+        let output = SHAPE(rgb_fbos[i], temp_fbo, NH,
+            parameters.width.value,
+            parameters.power.value, mx, my)
+        rgb_fbos[i] = output[0]
+        temp_fbo = output[1]
+
+        output = FFT(rgb_fbos[i], temp_fbo, levels, N, 1)
+        rgb_fbos[i] = output[0]
+        temp_fbo = output[1]
+
+        output = WPM(rgb_fbos[i], temp_fbo, N, k0, dz, dx)
+        rgb_fbos[i] = output[0]
+        temp_fbo = output[1]
+
+        output = FFT(rgb_fbos[i], temp_fbo, levels, N, -1)
+        rgb_fbos[i] = output[0]
+        temp_fbo = output[1]
+
+        // rgb_fbos[i].color[0].min = 'linear'
+
+        // console.log(rgb_fbos[i].color[0])
+
+        // // Change magnification filter (e.g., switch to nearest neighbor filtering)
+        // gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+
+        // // Alternatively, switch back to linear filtering
+        // gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+        rgb_fbos_mag[i].use(function(){
+            regl.clear({depth:1})
+            sample({texture: rgb_fbos[i]})
+        })
+    }
+
+  
+    draw({
+        textureR: rgb_fbos_mag[0].color[0],
+        textureG: rgb_fbos_mag[1].color[0],
+        textureB: rgb_fbos_mag[2].color[0],
+        phase: phase
+    })
+
+
+
+    phase = phase - Math.PI / 60
+    phase = phase % (Math.PI * 2)
+
+    // debugger;
+
+    // update for mouse movement
+
+    mdx = mx - mpx
+    mdy = my - mpy
+
+    if (m_down) {
+        parameters.width.update_add(mdx * 0.5)
+        parameters.power.update_add(mdy * -400)
+    }
+    mpx = mx
+    mpy = my
+}
+
+
+
+window.addEventListener('mousemove', (event) => {
+    const rect = regl._gl.canvas.getBoundingClientRect()
+    mx = (event.clientX - rect.left) / rect.width
+    my = 1 - (event.clientY - rect.top) / rect.height
+})
+
+window.addEventListener('mousedown', (event) => {
+    m_down = true
+    const rect = regl._gl.canvas.getBoundingClientRect()
+    mx = (event.clientX - rect.left) / rect.width
+    my = 1 - (event.clientY - rect.top) / rect.height
+    // mx = mdx
+    // my = mdy
+})
+
+window.addEventListener('mouseup', () => {
+    m_down = false
+})
+
+window.regl = regl
+
+export { update }
