@@ -7,4 +7,7 @@ export default defineConfig({
   build: {
     target: 'ES2022',
   },
+  resolve: {
+    extensions: ['.js', '.frag', '.vert'],
+  }
 });
