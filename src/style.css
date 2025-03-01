@@ -33,8 +33,9 @@
   content: "Loading";
   display: "block";
   text-align: "center";
-  color: black;
+  color: gray;
 }
+
 #canvas.loaded {
   opacity: 1;
   transition: opacity 1s;
