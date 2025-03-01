@@ -1,6 +1,6 @@
 let svg = document.querySelector('svg')
 
-console.log(svg)
+// console.log(svg)
 
 
 function draw_arc(z, w, c, type){
@@ -82,7 +82,7 @@ function update_overlay(width, power, domain_size){
     let z2_2 = z+2
 
     let f = 1/(1+Math.exp(40*power+8))
-    console.log(power)
+    // console.log(power)
     // f = 1
     z2 = (1-f)*z2_1
 
@@ -91,7 +91,7 @@ function update_overlay(width, power, domain_size){
     w2 = Math.sqrt(wl/Math.PI) * Math.sqrt((zr**2+z2**2)/zr)
     c2 = z2/(z2**2+zr**2)
     draw_arc((z2-z)*s, Math.min(Math.max(1, w2), domain_size/2-2)*s, c2/s)
-    console.log((z2-z)*s)
+    // console.log((z2-z)*s)
 
 }
 

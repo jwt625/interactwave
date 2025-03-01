@@ -4,6 +4,12 @@ import REGL from 'regl'
 let regl = REGL({
     // extensions: ['OES_texture_float'],
     container: document.querySelector('#canvas'),
+    onDone: function(){
+        console.log('load done')
+        setTimeout(() => {
+            document.querySelector('#canvas').classList.add('loaded')
+        }, 1);
+    }
 })
 
 // default rectangle mesh
