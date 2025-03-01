@@ -1,4 +1,4 @@
-precision mediump float;
+precision lowp float;
 uniform vec4 color;
 varying vec2 uv;
 
@@ -13,8 +13,8 @@ uniform float k0;
 
 void main(){
     float uvx = uv.x - 0.5/float(N);
-    float A = step(0.0, width*0.5-abs(uvx-0.5))/sqrt(width)*0.02;
-    // float A = exp(-pow((uvx-0.5)/width, 2.0))/sqrt(width)*0.02;
+    float A = smoothstep(0.0, 4.0/float(N), width*0.5-abs(uvx-0.5))/sqrt(width)*0.02;
+    // float A = exp(-pow((uvx-0.5)/width, 2.0))/sqrt(width)*0.01;
     
     float cs2 = pow((uvx-0.5), 2.0) * power;
     float angle = k0 * cs2 / (1.0 + sqrt(1.0 - cs2*power));
@@ -25,12 +25,13 @@ void main(){
         sin(angle)
     )*A;
 
+
     vec2 x = rgba2vec(texture2D(texture, uv));
 
 
     // vec2 u = vec2(step(0.0, -abs(uv.y-uv.x)))*0.3;
     x = mix(
-        x*0.999,
+        x,
         u,
         step(1.0-1.0/float(N), uv.y)
     );

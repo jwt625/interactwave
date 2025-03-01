@@ -67,7 +67,7 @@ let mpy = 0
 
 
 const parameters = {
-    width: new SmoothVar(0.2, 0.025, 0.5),
+    width: new SmoothVar(0.2, domain_size/N*2, 1.0),
     power: new SmoothVar(0.1, -1/5, 1/5),
 }
 
