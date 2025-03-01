@@ -174,6 +174,33 @@ window.addEventListener('mouseup', () => {
     m_down = false
 })
 
+// Touch screen
+const canvas = regl._gl.canvas
+canvas.addEventListener('touchstart', handleTouchStart, { passive: false });
+canvas.addEventListener('touchmove', handleTouchMove, { passive: false });
+canvas.addEventListener('touchend', handleTouchEnd, { passive: false });
+
+function handleTouchStart(e) {
+    e.preventDefault();
+    m_down = true;
+    const rect = canvas.getBoundingClientRect();
+    mx = (e.touches[0].clientX - rect.left) / rect.width;
+    my = 1 - (e.touches[0].clientY - rect.top) / rect.height;
+}
+
+function handleTouchMove(e) {
+    e.preventDefault();
+    const rect = canvas.getBoundingClientRect();
+    mx = (e.touches[0].clientX - rect.left) / rect.width;
+    my = 1 - (e.touches[0].clientY - rect.top) / rect.height;
+}
+
+function handleTouchEnd(e) {
+    e.preventDefault();
+    m_down = false;
+}
+
+
 window.regl = regl
 
 export { update }
