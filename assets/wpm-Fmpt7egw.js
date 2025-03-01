@@ -39,7 +39,7 @@ void main(){
     
     
 
-    float kx = (mod(uv.x+0.5, 1.0)-0.5)/dx*2.0*PI;
+    float kx = (mod(float(n)/float(N)+0.5, 1.0)-0.5)/dx*2.0*PI;
     float kz = sqrt(k0*k0-kx*kx);
     
     float angle = (kz * dz);
