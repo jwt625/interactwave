@@ -20,6 +20,13 @@ const domain_size = 15
 const dx = domain_size / N
 const dz = domain_size / NH
 
+const lensParams = {
+    z: 0.5,  // Lens is placed at the center (normalized between 0 and 1)
+    radius: 0.3,  // Lens curvature
+    refractiveIndex: 1.5,  // Default glass
+};
+
+
 let temp_fbo = regl.framebuffer({
     color: [
         // regl.texture({ type: "float", width: N, height: NH, format: "rgba"}),
@@ -97,7 +104,7 @@ function update() {
         rgb_fbos[i] = output[0]
         temp_fbo = output[1]
 
-        output = WPM(rgb_fbos[i], temp_fbo, N, k0, dz, dx)
+        output = WPM(rgb_fbos[i], temp_fbo, N, k0, dz, dx, lensParams.z, lensParams.radius, lensParams.refractiveIndex)
         rgb_fbos[i] = output[0]
         temp_fbo = output[1]
 
@@ -151,19 +158,28 @@ function update() {
     mpx = mx
     mpy = my
 
-    update_overlay(parameters.width.value, parameters.power.value, domain_size)
+    update_overlay(parameters.width.value, parameters.power.value, domain_size,
+        lensParams
+    )
 
     // console.log(regl.read())
 }
 
 
-
 window.addEventListener('mousemove', (event) => {
-    block_light = true
-    const rect = regl._gl.canvas.getBoundingClientRect()
-    mx = (event.clientX - rect.left) / rect.width
-    my = 1 - (event.clientY - rect.top) / rect.height
-})
+    const rect = canvas.getBoundingClientRect();
+    const insideCanvas =
+        event.clientX >= rect.left &&
+        event.clientX <= rect.right &&
+        event.clientY >= rect.top &&
+        event.clientY <= rect.bottom;
+
+    if (!insideCanvas) return; // Do not update if outside canvas
+
+    block_light = true;
+    mx = (event.clientX - rect.left) / rect.width;
+    my = 1 - (event.clientY - rect.top) / rect.height;
+});
 
 window.addEventListener('mousedown', (event) => {
     m_down = true
@@ -213,5 +229,26 @@ window.parameters = parameters
 document.getElementById('toggleButton').addEventListener('click', function(){
     parameters.colormode.set(1-parameters.colormode.target)
 })
+
+// Pass lens parameters to shader
+function updateLens() {
+
+    if (typeof lensParams.z !== "number" || isNaN(lensParams.z)) {
+        console.error("Invalid lens_z value:", lensParams.z);
+        lensParams.z = 0.5;  // Fallback value
+    }
+
+    console.log("Lens Parameters:", lensParams);
+
+    // Ensure lens updates are handled via the correct function
+    WPM(rgb_fbos[0], temp_fbo, N, k0, dz, dx, lensParams.z, lensParams.radius, lensParams.refractiveIndex);
+}
+
+// Example: Update lens properties on user interaction
+document.getElementById("lensControl").addEventListener("input", (event) => {
+    lensParams.radius = parseFloat(event.target.value);
+    // updateLens();
+});
+
 
 export { update }

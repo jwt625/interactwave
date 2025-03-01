@@ -39,7 +39,23 @@ function draw_arc(z, w, c, type){
     svg.appendChild(arc);
 }
 
-function update_overlay(width, power, domain_size){
+
+function drawLensOverlay(lensParams) {
+    let lens = document.createElementNS("http://www.w3.org/2000/svg", "ellipse");
+    lens.setAttribute("cx", "50%");
+    lens.setAttribute("cy", "50%");
+    lens.setAttribute("rx", lensParams.radius * 50);
+    lens.setAttribute("ry", "5");
+    lens.setAttribute("stroke", "white");
+    lens.setAttribute("fill", "none");
+    lens.setAttribute("stroke-width", "0.2");
+
+    svg.appendChild(lens);
+}
+
+
+
+function update_overlay(width, power, domain_size, lensParams){
 
 
     // Gaussian beam approximation?
@@ -93,6 +109,9 @@ function update_overlay(width, power, domain_size){
     draw_arc((z2-z)*s, Math.min(Math.max(1, w2), domain_size/2-2)*s, c2/s)
     // console.log((z2-z)*s)
 
+    // add lens
+    drawLensOverlay(lensParams)
 }
+
 
 export {update_overlay}
