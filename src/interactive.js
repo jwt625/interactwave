@@ -91,7 +91,7 @@ function update() {
 
         let output = SHAPE(rgb_fbos[i], temp_fbo, NH, k0*domain_size,
             parameters.width.value,
-            parameters.power.value * domain_size, mx, my)
+            parameters.power.value * domain_size, m_down?mx:-1, m_down?my:-1)
         rgb_fbos[i] = output[0]
         temp_fbo = output[1]
 

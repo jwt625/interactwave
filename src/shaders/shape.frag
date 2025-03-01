@@ -37,7 +37,7 @@ void main(){
     );
 
     float r = distance(uv, mouse);
-    x *= float(r>0.03);
+    x *= float(smoothstep(0.0, 0.05, r));
 
     // border
     float border = clamp(1.0-min(float(n), float(N-n-1))/20.0, 0.0, 1.0);
