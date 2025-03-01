@@ -34,7 +34,8 @@ void main(){
     ); 
 
 
-    vec4 color = colormap(x.y*10.0);
+    vec4 color = colormap(x.y*7.0);
+
     vec3 rgb = vec3(
         pow(xr.x*xr.x+xr.y*xr.y, gamma), 
         pow(x.x*x.x+x.y*x.y, gamma), 
@@ -42,5 +43,6 @@ void main(){
     )*10.0;
 
     color = vec4(rgb, 1);
+    // color = color * step(0.0, uv.x-0.5);
     gl_FragColor = color;
 }

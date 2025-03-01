@@ -5,6 +5,7 @@ import { WPM } from './shaders/wpm'
 import { SHAPE } from './shaders/shape'
 import { sample } from './shaders/sample'
 import { SmoothVar } from './smoothvar'
+import { update_overlay } from './overlay'
 // FFT domain
 const levels = 9
 const N = 2 ** levels
@@ -66,8 +67,8 @@ let mpy = 0
 
 
 const parameters = {
-    width: new SmoothVar(0.2, 0.01, 0.5),
-    power: new SmoothVar(0, -1000, 1000),
+    width: new SmoothVar(0.2, 0.025, 0.5),
+    power: new SmoothVar(0.1, -1/5, 1/5),
 }
 
 let phase = 0
@@ -84,10 +85,13 @@ function update() {
         const wavelength = [0.63, 0.532, 0.47][i]
         const k0 = Math.PI * 2 / wavelength
 
+        // curvature radius is power
+        // power = 1/f
+        // R = f
 
-        let output = SHAPE(rgb_fbos[i], temp_fbo, NH,
+        let output = SHAPE(rgb_fbos[i], temp_fbo, NH, k0*domain_size,
             parameters.width.value,
-            parameters.power.value, mx, my)
+            parameters.power.value * domain_size, mx, my)
         rgb_fbos[i] = output[0]
         temp_fbo = output[1]
 
@@ -112,13 +116,13 @@ function update() {
 
         // // Alternatively, switch back to linear filtering
         // gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-        rgb_fbos_mag[i].use(function(){
-            regl.clear({depth:1})
-            sample({texture: rgb_fbos[i]})
+        rgb_fbos_mag[i].use(function () {
+            regl.clear({ depth: 1 })
+            sample({ texture: rgb_fbos[i] })
         })
     }
 
-  
+
     draw({
         textureR: rgb_fbos_mag[0].color[0],
         textureG: rgb_fbos_mag[1].color[0],
@@ -139,11 +143,14 @@ function update() {
     mdy = my - mpy
 
     if (m_down) {
-        parameters.width.update_add(mdx * 0.5)
-        parameters.power.update_add(mdy * -400)
+        parameters.width.update_add(mdx * 0.7)
+        parameters.power.update_add(mdy * -0.5)
     }
+
     mpx = mx
     mpy = my
+
+    update_overlay(parameters.width.value, parameters.power.value, domain_size)
 }
 
 

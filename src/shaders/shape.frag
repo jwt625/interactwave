@@ -7,14 +7,17 @@ uniform float power;
 uniform sampler2D texture;
 uniform vec2 mouse;
 uniform int N;
+uniform float k0;
 
 #include ./utils/pack.frag
 
 void main(){
-    float A = step(0.0, width*0.5-abs(uv.x-0.5))/sqrt(width)*0.02;
-    // float A = exp(-pow((uv.x-0.5)/width*1.0, 2.0))/sqrt(width)*0.01;
+    float uvx = uv.x - 0.5/float(N);
+    float A = step(0.0, width*0.5-abs(uvx-0.5))/sqrt(width)*0.02;
+    // float A = exp(-pow((uvx-0.5)/width, 2.0))/sqrt(width)*0.02;
     
-    float angle = pow((uv.x-0.5), 2.0)*power;
+    float cs2 = pow((uvx-0.5), 2.0) * power;
+    float angle = k0 * cs2 / (1.0 + sqrt(1.0 - cs2*power));
 
     int n = int(uv.x * float(N));
     vec2 u = vec2(

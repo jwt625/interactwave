@@ -14,11 +14,12 @@ const shape = regl({
         texture: regl.prop('texture'),
         mouse: regl.prop('mouse'),
         N: regl.prop('N'),
+        k0: regl.prop('k0'),
     },
     count: 6,
 })
 
-function SHAPE(fbo, fbo_temp, N, width, power, mx, my){
+function SHAPE(fbo, fbo_temp, N, k0, width, power, mx, my){
     fbo_temp.use(function () {
         regl.clear({
             color: [0, 0, 0, 0],
@@ -29,7 +30,8 @@ function SHAPE(fbo, fbo_temp, N, width, power, mx, my){
             width: width,
             power: power,
             mouse: [mx, my],
-            N: N
+            N: N,
+            k0: k0
         })
         const temp = fbo_temp
         fbo_temp = fbo
