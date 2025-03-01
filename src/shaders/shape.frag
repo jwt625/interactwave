@@ -12,8 +12,8 @@ uniform float k0;
 #include ./utils/pack.frag
 
 void main(){
-    float uvx = uv.x - 0.5/float(N);
-    float A = smoothstep(0.0, 4.0/float(N), width*0.5-abs(uvx-0.5))/sqrt(width)*0.025;
+    float uvx = uv.x - 0.0/float(N);
+    float A = smoothstep(0.0, 4.0/float(N), width*0.5-abs(uv.x-0.5))/sqrt(width)*0.025;
     // float A = exp(-pow((uvx-0.5)/width, 2.0))/sqrt(width)*0.01;
     
     float cs2 = pow((uvx-0.5), 2.0) * power;
@@ -43,7 +43,6 @@ void main(){
     float border = clamp(1.0-min(float(n), float(N-n-1))/20.0, 0.0, 1.0);
     x = x*exp(-border*0.1);
 
-    
 
     gl_FragColor =vec2rgba(x);
 }

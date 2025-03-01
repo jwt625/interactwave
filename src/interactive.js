@@ -23,7 +23,7 @@ const dz = domain_size / NH
 let temp_fbo = regl.framebuffer({
     color: [
         // regl.texture({ type: "float", width: N, height: NH, format: "rgba"}),
-        regl.texture({ width: N, height: NH, format: "rgba" }),
+        regl.texture({ width: N, height: NH, format: "rgba", mag:"nearest", min:"nearest"}),
     ]
 })
 
@@ -31,22 +31,18 @@ let temp_fbo = regl.framebuffer({
 const rgb_fbos = ['r', 'g', 'b'].map(x => regl.framebuffer({
     color: [
         // regl.texture({ type: "float", width: N, height: NH, format: "rgba"}),
-        regl.texture({ width: N, height: NH, format: "rgba" }),
+        regl.texture({ width: N, height: NH, format: "rgba", mag:"nearest", min:"nearest" }),
     ]
 }))
 
 const rgb_fbos_mag = ['r', 'g', 'b'].map(x => regl.framebuffer({
     color: [
         // regl.texture({ type: "float", width: N, height: NH, format: "rgba"}),
-        regl.texture({ width: N, height: NH, format: "rgba", mag: "linear" }),
+        // regl.texture({ width: N, height: NH, format: "rgba", mag: "linear" }),
+        regl.texture({ width: N, height: NH, format: "rgba", mag:"linear", min:"linear" }),
     ]
 }))
 
-const output_fbos = regl.framebuffer({
-    color: [
-        regl.texture({ width: N, height: NH, format: "rgba", mag: "linear" }),
-    ]
-})
 
 // Main loop
 rgb_fbos.map(x => x.use(function () {
@@ -109,15 +105,6 @@ function update() {
         rgb_fbos[i] = output[0]
         temp_fbo = output[1]
 
-        // rgb_fbos[i].color[0].min = 'linear'
-
-        // console.log(rgb_fbos[i].color[0])
-
-        // // Change magnification filter (e.g., switch to nearest neighbor filtering)
-        // gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
-
-        // // Alternatively, switch back to linear filtering
-        // gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
         rgb_fbos_mag[i].use(function () {
             regl.clear({ depth: 1 })
             sample({ texture: rgb_fbos[i] })
@@ -125,6 +112,13 @@ function update() {
     }
 
 
+    // draw({
+    //     textureR: rgb_fbos[0].color[0],
+    //     textureG: rgb_fbos[1].color[0],
+    //     textureB: rgb_fbos[2].color[0],
+    //     phase: phase,
+    //     colormode: parameters.colormode.value
+    // })
     draw({
         textureR: rgb_fbos_mag[0].color[0],
         textureG: rgb_fbos_mag[1].color[0],
@@ -132,6 +126,7 @@ function update() {
         phase: phase,
         colormode: parameters.colormode.value
     })
+
 
 
 
@@ -158,7 +153,7 @@ function update() {
 
     update_overlay(parameters.width.value, parameters.power.value, domain_size)
 
-    
+    // console.log(regl.read())
 }
 
 
@@ -213,6 +208,7 @@ function handleTouchEnd(e) {
 
 
 window.regl = regl
+window.parameters = parameters
 
 document.getElementById('toggleButton').addEventListener('click', function(){
     parameters.colormode.set(1-parameters.colormode.target)

@@ -9,6 +9,10 @@ let regl = REGL({
         setTimeout(() => {
             document.querySelector('#canvas').classList.add('loaded')
         }, 1);
+    },
+    attributes:{
+        // preserveDrawingBuffer: true
+        depth: false
     }
 })
 
