@@ -3,7 +3,7 @@ import glsl from 'vite-plugin-glsl';
 
 export default defineConfig({
   plugins: [glsl()],
-  root: './',
+  base: './',
   build: {
     target: 'ES2022',
   },
