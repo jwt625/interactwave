@@ -3,7 +3,7 @@ import {regl, rect} from '../render'
 // main drawing function (shading)
 const sample = regl({
     frag: (await import('./sample.frag')).default,
-    vert: (await import('./utils/_default.vert')).default,
+    vert: (await import('./utils/default.vert')).default,
     attributes: {
         position: rect
     },

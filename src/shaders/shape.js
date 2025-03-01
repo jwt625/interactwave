@@ -4,7 +4,7 @@ import {regl, rect} from '../render'
 // Create input shape
 const shape = regl({
     frag: (await import('./shape.frag')).default,
-    vert: (await import('./utils/_default.vert')).default,
+    vert: (await import('./utils/default.vert')).default,
     attributes: {
         position: rect,
     },

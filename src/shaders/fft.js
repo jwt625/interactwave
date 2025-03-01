@@ -3,7 +3,7 @@ import {regl, rect} from '../render'
 // FFT Shader
 const fft = regl({
     frag: (await import('./fft.frag')).default,
-    vert: (await import('./utils/_default.vert')).default,
+    vert: (await import('./utils/default.vert')).default,
     attributes: {
         position: rect,
     },

@@ -5,7 +5,7 @@ import {regl, rect} from '../render'
 // wpm shader
 const wpm = regl({
     frag: (await import('./wpm.frag')).default,
-    vert: (await import('./utils/_default.vert')).default,
+    vert: (await import('./utils/default.vert')).default,
     attributes: {
         position: rect,
     },
