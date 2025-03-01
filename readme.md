@@ -129,14 +129,20 @@ First, we compute:
 
 $$
 A_m = \sum_{n=0}^{N/2-1} W_N^{2mn}x_{2n}
-\\ B_m = W_N^m \sum_{n=0}^{N/2-1} W_N^{2mn}x_{2n+1}
+$$
+
+$$
+B_m = W_N^m \sum_{n=0}^{N/2-1} W_N^{2mn}x_{2n+1}
 $$
 
 Then we have:
 
 $$
 X_{m} = A_m + B_m
-\\ X_{m+N/2} = A_m - B_m
+$$
+
+$$
+X_{m+N/2} = A_m - B_m
 $$
 
 $A_m$ is a smaller FFT, with only half the size, so does $B_m$ but need to multiply by a factor $W_{N}^m$:
