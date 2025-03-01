@@ -39,11 +39,12 @@
 #canvas.loaded {
   opacity: 1;
   transition: opacity 1s;
+  cursor:default;
 }
 
 #canvas.loaded::after{
   display: none;
-  content: ""
+  content: none;
 }
 
 canvas {
