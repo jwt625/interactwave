@@ -3,26 +3,32 @@
 
 <head>
   <meta charset="UTF-8" />
-  <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+  <link rel="icon" type="image/png" href="./favicon.ico">
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Interactive Wave</title>
-  <script type="module" crossorigin src="./assets/index-B-mHFYtK.js"></script>
-  <link rel="stylesheet" crossorigin href="./assets/index-BqKby49q.css">
+  <title>Interact Wave</title>
+  <meta name="description" content="Interact with wave.">
+  <meta name="keywords" content="Optics">
+  <link rel="author" href="https://chiuhans111.github.io/" />
+
+  <script type="module" crossorigin src="./assets/index-mWdYlzKA.js"></script>
+  <link rel="stylesheet" crossorigin href="./assets/index-CTB04oVO.css">
 </head>
 
 <body>
   <div id="app">
     <div class="container">
-      <h2>Shader based Wave Propagation Method</h2>
-
+      <button id="toggleButton">Toggle mode</button>
       <div id="canvas">
         <div class="overlay">
           <svg width="100%" height="100%" viewBox="0 0 100 100">
           </svg>
         </div>
-
       </div>
-      <p>A demo by Hans Chiu</p>
+      <p>Hold and drag to interact.</p>
+      <h2>About</h2>
+      <p>A demo by <a href="https://chiuhans111.github.io" target="_blank">Hans Chiu</a>.</p>
+      <p>This is a shader based wave propagation demonstration. </p>
+      <a href="https://github.com/chiuhans111/interactwave" target="_blank">GitHub Repo</a>
     </div>
   </div>
 </body>

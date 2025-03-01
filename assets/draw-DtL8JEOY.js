@@ -4,6 +4,7 @@ uniform float phase;
 uniform sampler2D textureR;
 uniform sampler2D textureG;
 uniform sampler2D textureB;
+uniform float colormode;
 
 vec2 rgba2vec(vec4 rgba){
     float mag = rgba.r + rgba.g / 255.0;
@@ -28,17 +29,17 @@ vec4 vec2rgba(vec2 vec){
     );
 }
 vec4 colormap(float x) {
-	vec4 color = mix(
-		vec4(1, 0.1, 0, 1),
-		vec4(0, 0.1, 1, 1),
+	vec3 color = mix(
+		vec3(1, 0.1, 0),
+		vec3(0, 0.1, 1),
 		x+0.5
 	) * abs(x)*2.0;
 	color = mix(
 		color,
-		vec4(vec3(0.9),1),
+		vec3(0.9),
 		clamp((abs(x)-0.5)*2.0, 0.0, 1.0)
 	);
-	return color;
+	return vec4(color, 1.0);
 }
 
 #define gamma 1.0/2.2
@@ -65,7 +66,7 @@ void main(){
         x.x*W.y + x.y*W.x
     ); 
 
-    vec4 color = colormap(x.y*7.0);
+    vec4 color = colormap(x.x*10.0);
 
     vec3 rgb = vec3(
         pow(xr.x*xr.x+xr.y*xr.y, gamma), 
@@ -73,7 +74,8 @@ void main(){
         pow(xb.x*xb.x+xb.y*xb.y, gamma)
     )*10.0;
 
-    color = vec4(rgb, 1);
+    color = mix(color, vec4(rgb, 1), colormode);
+
     
     gl_FragColor = color;
 }`;export{n as default};

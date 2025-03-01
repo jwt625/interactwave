@@ -1,4 +1,4 @@
-var n=`precision mediump float;
+var n=`precision lowp float;
 uniform vec4 color;
 varying vec2 uv;
 
@@ -34,7 +34,7 @@ vec4 vec2rgba(vec2 vec){
 
 void main(){
     float uvx = uv.x - 0.5/float(N);
-    float A = step(0.0, width*0.5-abs(uvx-0.5))/sqrt(width)*0.02;
+    float A = smoothstep(0.0, 4.0/float(N), width*0.5-abs(uvx-0.5))/sqrt(width)*0.025;
     
     
     float cs2 = pow((uvx-0.5), 2.0) * power;
@@ -50,13 +50,13 @@ void main(){
 
     
     x = mix(
-        x*0.999,
+        x,
         u,
         step(1.0-1.0/float(N), uv.y)
     );
 
     float r = distance(uv, mouse);
-    x *= float(r>0.03);
+    x *= float(smoothstep(0.0, 0.06, r));
 
     
     float border = clamp(1.0-min(float(n), float(N-n-1))/20.0, 0.0, 1.0);
