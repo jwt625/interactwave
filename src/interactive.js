@@ -72,6 +72,7 @@ const parameters = {
 }
 
 let phase = 0
+let block_light = false
 
 function update() {
     regl.poll()
@@ -91,7 +92,7 @@ function update() {
 
         let output = SHAPE(rgb_fbos[i], temp_fbo, NH, k0*domain_size,
             parameters.width.value,
-            parameters.power.value * domain_size, m_down?mx:-1, m_down?my:-1)
+            parameters.power.value * domain_size, block_light?mx:-1, block_light?my:-1)
         rgb_fbos[i] = output[0]
         temp_fbo = output[1]
 
@@ -156,6 +157,7 @@ function update() {
 
 
 window.addEventListener('mousemove', (event) => {
+    block_light = true
     const rect = regl._gl.canvas.getBoundingClientRect()
     mx = (event.clientX - rect.left) / rect.width
     my = 1 - (event.clientY - rect.top) / rect.height
@@ -183,6 +185,7 @@ canvas.addEventListener('touchend', handleTouchEnd, { passive: false });
 function handleTouchStart(e) {
     e.preventDefault();
     m_down = true;
+    block_light = true;
     const rect = canvas.getBoundingClientRect();
     mpx=mx = (e.touches[0].clientX - rect.left) / rect.width;
     mpy=my = 1 - (e.touches[0].clientY - rect.top) / rect.height;
@@ -198,6 +201,7 @@ function handleTouchMove(e) {
 function handleTouchEnd(e) {
     e.preventDefault();
     m_down = false;
+    block_light = false
 }
 
 
