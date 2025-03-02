@@ -7,7 +7,7 @@ import { sample } from './shaders/sample'
 import { SmoothVar } from './smoothvar'
 import { update_overlay } from './overlay'
 // FFT domain
-const levels = 9
+const levels = 10
 const N = 2 ** levels
 const NH = Math.round(N / 4)
 
@@ -16,7 +16,7 @@ regl._gl.canvas.width = N
 regl._gl.canvas.height = N
 
 
-const domain_size = 15
+const domain_size = 30
 const dx = domain_size / N
 const dz = domain_size / NH
 
@@ -77,8 +77,24 @@ const parameters = {
 
 let phase = 0
 let block_light = false
+let N_color = 3
+
+// fps tracking
+let lastTime = performance.now();
+let frameCount = 0;
+let fps = 0;
 
 function update() {
+    let now = performance.now();
+    frameCount++;
+    
+    if (now - lastTime >= 1000) { // Update FPS every second
+        fps = frameCount;
+        frameCount = 0;
+        lastTime = now;
+        document.getElementById("fpsCounter").textContent = `FPS: ${fps}`;
+    }
+    
     // console.log("domain size:", domain_size);
     regl.poll()
 
@@ -86,7 +102,7 @@ function update() {
         color: [0, 0, 0, 1],
     })
 
-    for (let i = 0; i < 3; i++) {
+    for (let i = 0; i < N_color; i++) {
         // WPM
         const wavelength = [0.63, 0.532, 0.47][i]
         const k0 = Math.PI * 2 / wavelength
@@ -106,7 +122,7 @@ function update() {
         rgb_fbos[i] = output[0]
         temp_fbo = output[1]
 
-        output = WPM(rgb_fbos[i], temp_fbo, N, k0, dz, dx, lensParams.z, lensParams.radius, lensParams.refractiveIndex)
+        output = WPM(rgb_fbos[i], temp_fbo, N, k0, dz, dx)
         rgb_fbos[i] = output[0]
         temp_fbo = output[1]
 
@@ -132,6 +148,9 @@ function update() {
         textureR: rgb_fbos_mag[0].color[0],
         textureG: rgb_fbos_mag[1].color[0],
         textureB: rgb_fbos_mag[2].color[0],
+        // single color:
+        // textureG: rgb_fbos_mag[0].color[0],
+        // textureB: rgb_fbos_mag[0].color[0],
         phase: phase,
         colormode: parameters.colormode.value
     })
@@ -233,19 +252,6 @@ document.getElementById('toggleButton').addEventListener('click', function(){
     parameters.colormode.set(1-parameters.colormode.target)
 })
 
-// Pass lens parameters to shader
-function updateLens() {
-
-    if (typeof lensParams.z !== "number" || isNaN(lensParams.z)) {
-        console.error("Invalid lens_z value:", lensParams.z);
-        lensParams.z = 0.5;  // Fallback value
-    }
-
-    console.log("Lens Parameters:", lensParams);
-
-    // Ensure lens updates are handled via the correct function
-    // WPM(rgb_fbos[0], temp_fbo, N, k0, dz, dx, lensParams.z, lensParams.radius, lensParams.refractiveIndex);
-}
 
 // Example: Update lens properties on user interaction
 document.getElementById("lensControl").addEventListener("input", (event) => {

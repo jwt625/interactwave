@@ -6,9 +6,6 @@ uniform sampler2D texture;
 uniform float k0;
 uniform float dx;
 uniform float dz;
-uniform float lens_z;  // The depth at which the lens is located
-uniform float lens_radius;
-uniform float lens_refractive_index;
 
 #define PI 3.14159265358979
 

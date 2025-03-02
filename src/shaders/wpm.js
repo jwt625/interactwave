@@ -15,9 +15,6 @@ const wpm = regl({
         dx: regl.prop('dx'),
         dz: regl.prop('dz'),
         k0: regl.prop('k0'),
-        lens_z: (context, props) => props.lens_z ?? 0.5,  // Default to 0.5
-        lens_radius: (context, props) => props.lens_radius ?? 0.3,  // Default to 0.3
-        lens_refractive_index: (context, props) => props.lens_refractive_index ?? 1.5,  // Default to 1.5
     },
     count: 6,
 });
@@ -36,9 +33,6 @@ function WPM(fbo, fbo_temp, N, k0, dz, dx, lens_z, lens_radius, lens_refractive_
             dz: dz,
             dx: dx,
             k0: k0,
-            lens_z: lens_z,
-            lens_radius: lens_radius,
-            lens_refractive_index: lens_refractive_index
         })
     }})
     const temp = fbo_temp
