@@ -53,9 +53,31 @@ function drawLensOverlay(lensParams) {
     svg.appendChild(lens);
 }
 
+function drawSlabOverlay(slabParams) {
+    let slab = document.createElementNS("http://www.w3.org/2000/svg", "rect");
 
+    // Convert slab length and thickness to overlay scale
+    let slabWidth = slabParams.length * 100;  // Length in x-direction
+    let slabHeight = slabParams.thickness * 100;  // Thickness in z-direction
 
-function update_overlay(width, power, domain_size, lensParams){
+    // Compute rotation center correctly before translation
+    let angleRad = (Math.PI / 180) * slabParams.angle;
+    let xCenter = slabParams.x_center * 100;
+    let zCenter = slabParams.z_center * 100;
+    
+
+    // Set slab attributes
+    slab.setAttribute("x", `${xCenter - slabWidth / 2}`);
+    slab.setAttribute("y", `${zCenter - slabHeight / 2}`);
+    slab.setAttribute("width", `${slabWidth}`);
+    slab.setAttribute("height", `${slabHeight}`);
+    slab.setAttribute("fill", "rgba(255, 255, 255, 0.3)");
+    slab.setAttribute("transform", `rotate(${slabParams.angle}, ${xCenter}, ${zCenter})`);
+
+    svg.appendChild(slab);
+}
+
+function update_overlay(width, power, domain_size, lensParams, slabParams){
 
 
     // Gaussian beam approximation?
@@ -111,6 +133,9 @@ function update_overlay(width, power, domain_size, lensParams){
 
     // add lens
     drawLensOverlay(lensParams)
+
+    // add slab
+    drawSlabOverlay(slabParams);
 }
 
 

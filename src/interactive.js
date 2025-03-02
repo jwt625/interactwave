@@ -22,7 +22,7 @@ const dz = domain_size / NH
 
 const lensParams = {
     z: 0.5,  // Lens is placed at the center (normalized between 0 and 1)
-    radius: 0.3,  // Lens curvature
+    radius: 0.9,  // Lens curvature
     refractiveIndex: 1.5,  // Default glass
 };
 
@@ -85,6 +85,18 @@ let lastRenderTime = performance.now();
 let frameCount = 0;
 let fps = 0;
 
+
+// Slab parameters
+const slabParams = {
+    x_center: 0.5, // Center of the domain
+    z_center: 0.25, // Middle between source and lens
+    thickness: 0.05,
+    length: 0.7,
+    angle: 20,
+    refractiveIndex: 1.5,
+};
+
+
 function stepSimulation() {
     for (let i = 0; i < 3; i++) {
         const wavelength = [0.63, 0.532, 0.47][i];
@@ -101,8 +113,7 @@ function stepSimulation() {
         rgb_fbos[i] = output[0];
         temp_fbo = output[1];
 
-        output = WPM(rgb_fbos[i], temp_fbo, N, k0, dz, dx,
-            lensParams.z, lensParams.radius, lensParams.refractiveIndex);
+        output = WPM(rgb_fbos[i], temp_fbo, N, k0, dz, dx, slabParams);
         rgb_fbos[i] = output[0];
         temp_fbo = output[1];
 
@@ -162,7 +173,8 @@ function update() {
         colormode: parameters.colormode.value
     });
 
-    update_overlay(parameters.width.value, parameters.power.value, domain_size, lensParams);
+    update_overlay(parameters.width.value, parameters.power.value, 
+        domain_size, lensParams, slabParams);
 }
 
 
