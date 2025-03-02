@@ -79,6 +79,7 @@ let phase = 0
 let block_light = false
 
 function update() {
+    // console.log("domain size:", domain_size);
     regl.poll()
 
     regl.clear({
@@ -96,7 +97,8 @@ function update() {
 
         let output = SHAPE(rgb_fbos[i], temp_fbo, NH, k0*domain_size,
             parameters.width.value,
-            parameters.power.value * domain_size, block_light?mx:-1, block_light?my:-1)
+            parameters.power.value * domain_size, block_light?mx:-1, block_light?my:-1,
+            lensParams.z, lensParams.radius, lensParams.refractiveIndex)
         rgb_fbos[i] = output[0]
         temp_fbo = output[1]
 
@@ -163,6 +165,7 @@ function update() {
     )
 
     // console.log(regl.read())
+    // updateLens()
 }
 
 
@@ -241,7 +244,7 @@ function updateLens() {
     console.log("Lens Parameters:", lensParams);
 
     // Ensure lens updates are handled via the correct function
-    WPM(rgb_fbos[0], temp_fbo, N, k0, dz, dx, lensParams.z, lensParams.radius, lensParams.refractiveIndex);
+    // WPM(rgb_fbos[0], temp_fbo, N, k0, dz, dx, lensParams.z, lensParams.radius, lensParams.refractiveIndex);
 }
 
 // Example: Update lens properties on user interaction

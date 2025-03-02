@@ -8,41 +8,49 @@ uniform sampler2D texture;
 uniform vec2 mouse;
 uniform int N;
 uniform float k0;
+uniform float lens_z;
+uniform float lens_radius;
+uniform float lens_refractive_index;
 
 #include ./utils/pack.frag
 
 void main(){
-    float uvx = uv.x - 0.0/float(N);
-    float A = smoothstep(0.0, 4.0/float(N), width*0.5-abs(uv.x-0.5))/sqrt(width)*0.025;
-    // float A = exp(-pow((uvx-0.5)/width, 2.0))/sqrt(width)*0.01;
-    
-    float cs2 = pow((uvx-0.5), 2.0) * power;
-    float angle = k0 * cs2 / (1.0 + sqrt(1.0 - cs2*power));
+    float uvx = uv.x - 0.5 / float(N);
 
-    int n = int(uv.x * float(N));
-    vec2 u = vec2(
-        cos(angle),
-        sin(angle)
-    )*A;
+    // Define the initial amplitude (Gaussian beam)
+    float A = smoothstep(0.0, 4.0 / float(N), width * 0.5 - abs(uvx - 0.5)) / sqrt(width) * 0.025;
 
+    // Apply curvature (phase shift for beam focus)
+    float cs2 = pow((uvx - 0.5), 2.0) * power;
+    float angle = k0 * cs2 / (1.0 + sqrt(1.0 - cs2 * power));
+
+    vec2 u = vec2(cos(angle), sin(angle)) * A;
 
     vec2 x = rgba2vec(texture2D(texture, uv));
 
-
-    // vec2 u = vec2(step(0.0, -abs(uv.y-uv.x)))*0.3;
-    x = mix(
-        x,
-        u,
-        step(1.0-1.0/float(N), uv.y)
-    );
-
+    // Apply mouse blocking (cursor blocks the wave)
     float r = distance(uv, mouse);
     x *= float(smoothstep(0.0, 0.06, r));
 
-    // border
-    float border = clamp(1.0-min(float(n), float(N-n-1))/20.0, 0.0, 1.0);
-    x = x*exp(-border*0.1);
+    // Inject the source at the bottom
+    x = mix(x, u, step(1.0 - 1.0 / float(N), uv.y));
 
+    // Apply lens phase shift at lens_z
+    if (abs(uv.y - lens_z) < 1.0 / float(N)) {
+        float dx = uv.x - 0.5; // Centered x-coordinate
+        float r2 = dx * dx;
+        
+        // Compute focal length
+        float focal_length = lens_radius * lens_radius / (lens_refractive_index - 1.0);
 
-    gl_FragColor =vec2rgba(x);
+        // Compute quadratic phase shift for a thin lens
+        float lens_phase_shift = -0.5 * k0 / focal_length * r2;
+        vec2 lens_phase = vec2(cos(lens_phase_shift), sin(lens_phase_shift));
+
+        // Apply phase shift to the existing wave field
+        x = vec2(x.x * lens_phase.x - x.y * lens_phase.y, 
+                 x.x * lens_phase.y + x.y * lens_phase.x);
+    }
+
+    gl_FragColor = vec2rgba(x);
 }
