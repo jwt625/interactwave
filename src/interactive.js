@@ -80,111 +80,89 @@ let block_light = false
 let N_color = 3
 
 // fps tracking
-let lastTime = performance.now();
+const SIMULATION_STEPS_PER_FRAME = 20; // Run 4 simulation steps per rendered frame
+let lastRenderTime = performance.now();
 let frameCount = 0;
 let fps = 0;
 
-function update() {
-    let now = performance.now();
-    frameCount++;
-    
-    if (now - lastTime >= 1000) { // Update FPS every second
-        fps = frameCount;
-        frameCount = 0;
-        lastTime = now;
-        document.getElementById("fpsCounter").textContent = `FPS: ${fps}`;
-    }
-    
-    // console.log("domain size:", domain_size);
-    regl.poll()
+function stepSimulation() {
+    for (let i = 0; i < 3; i++) {
+        const wavelength = [0.63, 0.532, 0.47][i];
+        const k0 = Math.PI * 2 / wavelength;
 
-    regl.clear({
-        color: [0, 0, 0, 1],
-    })
+        let output = SHAPE(rgb_fbos[i], temp_fbo, NH, k0 * domain_size,
+            parameters.width.value, parameters.power.value * domain_size,
+            block_light ? mx : -1, block_light ? my : -1,
+            lensParams.z, lensParams.radius, lensParams.refractiveIndex);
+        rgb_fbos[i] = output[0];
+        temp_fbo = output[1];
 
-    for (let i = 0; i < N_color; i++) {
-        // WPM
-        const wavelength = [0.63, 0.532, 0.47][i]
-        const k0 = Math.PI * 2 / wavelength
+        output = FFT(rgb_fbos[i], temp_fbo, levels, N, 1);
+        rgb_fbos[i] = output[0];
+        temp_fbo = output[1];
 
-        // curvature radius is power
-        // power = 1/f
-        // R = f
+        output = WPM(rgb_fbos[i], temp_fbo, N, k0, dz, dx,
+            lensParams.z, lensParams.radius, lensParams.refractiveIndex);
+        rgb_fbos[i] = output[0];
+        temp_fbo = output[1];
 
-        let output = SHAPE(rgb_fbos[i], temp_fbo, NH, k0*domain_size,
-            parameters.width.value,
-            parameters.power.value * domain_size, block_light?mx:-1, block_light?my:-1,
-            lensParams.z, lensParams.radius, lensParams.refractiveIndex)
-        rgb_fbos[i] = output[0]
-        temp_fbo = output[1]
-
-        output = FFT(rgb_fbos[i], temp_fbo, levels, N, 1)
-        rgb_fbos[i] = output[0]
-        temp_fbo = output[1]
-
-        output = WPM(rgb_fbos[i], temp_fbo, N, k0, dz, dx)
-        rgb_fbos[i] = output[0]
-        temp_fbo = output[1]
-
-        output = FFT(rgb_fbos[i], temp_fbo, levels, N, -1)
-        rgb_fbos[i] = output[0]
-        temp_fbo = output[1]
+        output = FFT(rgb_fbos[i], temp_fbo, levels, N, -1);
+        rgb_fbos[i] = output[0];
+        temp_fbo = output[1];
 
         rgb_fbos_mag[i].use(function () {
-            regl.clear({ depth: 1 })
-            sample({ texture: rgb_fbos[i] })
-        })
+            regl.clear({ depth: 1 });
+            sample({ texture: rgb_fbos[i] });
+        });
     }
 
+    phase = (phase - Math.PI / 60) % (Math.PI * 2);
+}
 
-    // draw({
-    //     textureR: rgb_fbos[0].color[0],
-    //     textureG: rgb_fbos[1].color[0],
-    //     textureB: rgb_fbos[2].color[0],
-    //     phase: phase,
-    //     colormode: parameters.colormode.value
-    // })
+let lastMouseX = 0;
+let lastMouseY = 0;
+
+function update() {
+    // Run the simulation multiple times before rendering
+    for (let i = 0; i < SIMULATION_STEPS_PER_FRAME; i++) {
+        stepSimulation();
+    }
+
+    // Apply user interaction updates **only once per render**
+    if (m_down) {
+        let dx = mx - lastMouseX;
+        let dy = my - lastMouseY;
+        parameters.width.add(dx * 0.7);
+        parameters.power.add(dy * -0.4);
+    }
+
+    for (let i in parameters) {
+        parameters[i].update();
+    }
+
+    lastMouseX = mx;
+    lastMouseY = my;
+
+    // Render only at monitor refresh rate (60 FPS)
+    let now = performance.now();
+    frameCount++;
+
+    if (now - lastRenderTime >= 1000) {
+        fps = frameCount;
+        frameCount = 0;
+        lastRenderTime = now;
+        document.getElementById("fpsCounter").textContent = `FPS: ${fps}`;
+    }
+
     draw({
         textureR: rgb_fbos_mag[0].color[0],
         textureG: rgb_fbos_mag[1].color[0],
         textureB: rgb_fbos_mag[2].color[0],
-        // single color:
-        // textureG: rgb_fbos_mag[0].color[0],
-        // textureB: rgb_fbos_mag[0].color[0],
         phase: phase,
         colormode: parameters.colormode.value
-    })
+    });
 
-
-
-
-    phase = phase - Math.PI / 60
-    phase = phase % (Math.PI * 2)
-
-    // debugger;
-
-    // update for mouse movement
-
-    mdx = mx - mpx  
-    mdy = my - mpy
-
-    if (m_down) {
-        parameters.width.add(mdx * 0.7)
-        parameters.power.add(mdy * -0.4)
-    }
-    for(let i in parameters){
-        parameters[i].update()
-    }
-
-    mpx = mx
-    mpy = my
-
-    update_overlay(parameters.width.value, parameters.power.value, domain_size,
-        lensParams
-    )
-
-    // console.log(regl.read())
-    // updateLens()
+    update_overlay(parameters.width.value, parameters.power.value, domain_size, lensParams);
 }
 
 
@@ -204,13 +182,20 @@ window.addEventListener('mousemove', (event) => {
 });
 
 window.addEventListener('mousedown', (event) => {
-    m_down = true
-    const rect = regl._gl.canvas.getBoundingClientRect()
-    mpx=mx = (event.clientX - rect.left) / rect.width
-    mpy=my = 1 - (event.clientY - rect.top) / rect.height
-    // mx = mdx
-    // my = mdy
-})
+    const rect = regl._gl.canvas.getBoundingClientRect();
+    const insideCanvas =
+        event.clientX >= rect.left &&
+        event.clientX <= rect.right &&
+        event.clientY >= rect.top &&
+        event.clientY <= rect.bottom;
+
+    if (!insideCanvas) return; // Ignore clicks outside the canvas
+
+    m_down = true;
+    mpx = mx = (event.clientX - rect.left) / rect.width;
+    mpy = my = 1 - (event.clientY - rect.top) / rect.height;
+});
+
 
 window.addEventListener('mouseup', () => {
     m_down = false
