@@ -135,7 +135,7 @@ function update_overlay(width, power, domain_size, lensParams, slabParams){
     drawLensOverlay(lensParams)
 
     // add slab
-    drawSlabOverlay(slabParams);
+    // drawSlabOverlay(slabParams);
 }
 
 

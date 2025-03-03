@@ -2,6 +2,7 @@ import { regl } from './render'
 import { draw } from './shaders/draw'
 import { FFT } from './shaders/fft'
 import { WPM } from './shaders/wpm'
+import { BPM } from './shaders/bpm'
 import { SHAPE } from './shaders/shape'
 import { sample } from './shaders/sample'
 import { SmoothVar } from './smoothvar'
@@ -10,13 +11,15 @@ import { update_overlay } from './overlay'
 const levels = 10
 const N = 2 ** levels
 const NH = Math.round(N / 4)
+// const NH = Math.round(N*2)
 
 // resize 
 regl._gl.canvas.width = N
 regl._gl.canvas.height = N
 
 
-const domain_size = 30
+// const domain_size = 30  // original
+const domain_size = 3000  //beam prop works better at larger domain...
 const dx = domain_size / N
 const dz = domain_size / NH
 
@@ -25,6 +28,13 @@ const lensParams = {
     radius: 0.9,  // Lens curvature
     refractiveIndex: 1.5,  // Default glass
 };
+
+// beam launch parameters
+const parameters = {
+    width: new SmoothVar(0.7, domain_size/N*2, 0.7),
+    power: new SmoothVar(-0.0, -1/5, 1/5),
+    colormode: new SmoothVar(1, 0, 1)
+}
 
 
 let temp_fbo = regl.framebuffer({
@@ -68,19 +78,12 @@ let mdy = 0
 let mpx = 0
 let mpy = 0
 
-
-const parameters = {
-    width: new SmoothVar(0.2, domain_size/N*2, 0.7),
-    power: new SmoothVar(0.1, -1/5, 1/5),
-    colormode: new SmoothVar(1, 0, 1)
-}
-
 let phase = 0
 let block_light = false
 let N_color = 3
 
 // fps tracking
-const SIMULATION_STEPS_PER_FRAME = 20; // Run 4 simulation steps per rendered frame
+const SIMULATION_STEPS_PER_FRAME = 10; // Run 4 simulation steps per rendered frame
 let lastRenderTime = performance.now();
 let frameCount = 0;
 let fps = 0;
@@ -109,15 +112,22 @@ function stepSimulation() {
         rgb_fbos[i] = output[0];
         temp_fbo = output[1];
 
-        output = FFT(rgb_fbos[i], temp_fbo, levels, N, 1);
-        rgb_fbos[i] = output[0];
-        temp_fbo = output[1];
+        // Wave propagation method
+        // output = FFT(rgb_fbos[i], temp_fbo, levels, N, 1);
+        // rgb_fbos[i] = output[0];
+        // temp_fbo = output[1];
 
-        output = WPM(rgb_fbos[i], temp_fbo, N, k0, dz, dx, slabParams);
-        rgb_fbos[i] = output[0];
-        temp_fbo = output[1];
+        // output = WPM(rgb_fbos[i], temp_fbo, N, k0, dz, dx, slabParams);
+        // rgb_fbos[i] = output[0];
+        // temp_fbo = output[1];
 
-        output = FFT(rgb_fbos[i], temp_fbo, levels, N, -1);
+        // output = FFT(rgb_fbos[i], temp_fbo, levels, N, -1);
+        // rgb_fbos[i] = output[0];
+        // temp_fbo = output[1];
+
+
+        // Beam propagation method
+        output = BPM(rgb_fbos[i], temp_fbo, N, k0 , dz, dx, 1.0, refractiveIndexTex);
         rgb_fbos[i] = output[0];
         temp_fbo = output[1];
 
@@ -129,6 +139,44 @@ function stepSimulation() {
 
     phase = (phase - Math.PI / 60) % (Math.PI * 2);
 }
+
+function createRefractiveIndexTexture(regl, N) {
+    const data = new Uint8Array(N * N);
+
+    for (let j = 0; j < N; j++) {
+        for (let i = 0; i < N; i++) {
+            let x = i / N;
+            let index = j * N + i;
+
+            // Define a step-index waveguide at x = 0.55 with width 0.1
+            let n = (Math.abs(x - 0.55) < 0.05) ? 1.5 : 1.0;
+
+            // Encode refractive index into 8-bit range (assuming max n = 5.0)
+            data[index] = Math.round((n / 5.0) * 255);
+        }
+    }
+
+    return regl.texture({
+        data,
+        width: N,
+        height: N,
+        format: 'alpha',
+        type: 'uint8',
+        wrapS: 'clamp',
+        wrapT: 'clamp',
+        min: 'nearest',
+        mag: 'nearest'
+    });
+}
+
+
+// if (!regl.hasExtension('OES_texture_float')) {
+//     throw new Error('Floating point textures are not supported on this device!');
+// }
+
+
+// Create refractive index texture
+const refractiveIndexTex = createRefractiveIndexTexture(regl, N);
 
 let lastMouseX = 0;
 let lastMouseY = 0;
