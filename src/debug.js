@@ -8,7 +8,7 @@ import { SmoothVar } from './smoothvar'
 import { update_overlay } from './overlay'
 
 // FFT domain
-const levels = 4
+const levels = 7
 const N = 2 ** levels
 const NH = Math.round(N / 1)
 
@@ -17,9 +17,17 @@ regl._gl.canvas.width = N
 regl._gl.canvas.height = N
 
 
-const domain_size = 15
+const domain_size = 30
 const dx = domain_size / N
 const dz = domain_size / NH
+
+// beam launch parameters
+const parameters = {
+    width: new SmoothVar(0.7, domain_size/N*2, 0.7),
+    power: new SmoothVar(-0.0, -1/5, 1/5),
+    colormode: new SmoothVar(1, 0, 1)
+}
+
 
 let temp_fbo = regl.framebuffer({
     color: [

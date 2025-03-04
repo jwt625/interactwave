@@ -8,18 +8,18 @@ import { sample } from './shaders/sample'
 import { SmoothVar } from './smoothvar'
 import { update_overlay } from './overlay'
 // FFT domain
-const levels = 10
+const levels = 7
 const N = 2 ** levels
-const NH = Math.round(N / 4)
-// const NH = Math.round(N*2)
+// const NH = Math.round(N / 4)
+const NH = Math.round(N)
 
 // resize 
 regl._gl.canvas.width = N
 regl._gl.canvas.height = N
 
 
-// const domain_size = 30  // original
-const domain_size = 3000  //beam prop works better at larger domain...
+const domain_size = 30  // original
+// const domain_size = 3000  //beam prop works better at larger domain...
 const dx = domain_size / N
 const dz = domain_size / NH
 
@@ -137,21 +137,22 @@ function stepSimulation() {
         });
     }
 
-    phase = (phase - Math.PI / 60) % (Math.PI * 2);
+    phase = (phase - Math.PI / 200) % (Math.PI * 2);   // step the phase. Fake. Just for plotting
 }
 
 function createRefractiveIndexTexture(regl, N) {
     const data = new Uint8Array(N * N);
+    const center = 0.55;
+    const width = 0.05; // Transition width for smoothing
 
     for (let j = 0; j < N; j++) {
-        for (let i = 0; i < N; i++) {
+        for (let i = 0; i < N; i++) {            
             let x = i / N;
-            let index = j * N + i;
-
-            // Define a step-index waveguide at x = 0.55 with width 0.1
-            let n = (Math.abs(x - 0.55) < 0.05) ? 1.5 : 1.0;
+            let transition = (Math.abs(x - center) - width) / width;
+            let n = 1.0 + (1.01 - 1.0) * Math.exp(-transition * transition * 4.0); // Gaussian smoothing inside waveguide
 
             // Encode refractive index into 8-bit range (assuming max n = 5.0)
+            let index = j * N + i;
             data[index] = Math.round((n / 5.0) * 255);
         }
     }

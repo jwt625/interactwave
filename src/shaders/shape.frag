@@ -17,8 +17,10 @@ uniform float lens_refractive_index;
 void main(){
     float uvx = uv.x - 0.5 / float(N);
 
-    // Define the initial amplitude (Gaussian beam)
-    float A = smoothstep(0.0, 4.0 / float(N), width * 0.5 - abs(uvx - 0.5)) / sqrt(width) * 0.025;
+    // old:
+    // float A = smoothstep(0.0, 4.0 / float(N), width * 0.5 - abs(uvx - 0.5)) / sqrt(width) * 0.025;
+    // Apply Gaussian function for smoother beam edges
+    float A = exp(-pow((uvx - 0.5) / (width * 0.3), 2.0)) / sqrt(width) * 0.025;
 
     // Apply curvature (phase shift for beam focus)
     float cs2 = pow((uvx - 0.5), 2.0) * power;
@@ -33,7 +35,7 @@ void main(){
     x *= float(smoothstep(0.0, 0.06, r));
 
     // Inject the source at the bottom
-    x = mix(x, u, step(1.0 - 1.0 / float(N), uv.y));
+    x = mix(x, u, step(1.0 - 10.0 / float(N), uv.y));
 
     // Apply lens phase shift at lens_z
     if (abs(uv.y - lens_z) < 1.0 / float(N)) {

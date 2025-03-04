@@ -15,7 +15,8 @@ uniform sampler2D refractiveIndexTex;
 
 void main() {
     // Fetch the field at (x, z + dz) (previous step in z, moving downward)
-    vec2 offsetz = vec2(0, 1.0 / float(N) * dz / dx);
+    vec2 offsetz = vec2(0.0 , 1.0 / float(N) * dz / dx);
+    // vec2 offsetz = vec2(0, 1.0 / float(N) );
     // vec2 offsetx = vec2(1.0 / float(N) * dx / dz, 0.0);
     vec2 offsetx = vec2(1.0 / float(N), 0.0);
     
@@ -33,15 +34,18 @@ void main() {
 
     // Compute second derivative in x (Laplacian)
     vec2 d2E_dx2 = (E_left - 2.0 * E_prev + E_right) / (dx * dx);
+    // d2E_dx2 *= 1.0 - 0.1 * smoothstep(0.0, 0.1, abs(d2E_dx2));   // extra smoothing. No effect
 
     // Compute change in field along z using Equation (5)
     float delta_n = n_i * n_i - n0 * n0;
-    vec2 dE_dz = (d2E_dx2 + k0 * k0 * delta_n * E_prev) * (dz / (2.0 * k0 * n0));
+    // vec2 dE_dz = (d2E_dx2 + k0 * k0 * delta_n * E_prev) * (dz / (2.0 * k0 * n0));
+    // debug, this should be equivalent to WPM
+    vec2 dE_dz = (d2E_dx2 ) * (dz / (2.0 * k0 * n0));
 
     // Apply j multiplication: swap real and imaginary parts
-    vec2 j_dE_dz = vec2(-dE_dz.y, dE_dz.x);
+    vec2 j_dE_dz = vec2(dE_dz.y, -dE_dz.x);
 
-    // Forward propagation step: E(z) = E(z + dz) + j * dE/dz
+    // Forward propagation step: E(z) = E(z + dz) + dE/dz (beam is propagating downward)
     vec2 E_new = E_prev + j_dE_dz;
 
     // Store the updated field at the current z position
