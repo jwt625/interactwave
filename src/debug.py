@@ -1,6 +1,7 @@
 
 #%%
 
+# Re-import necessary libraries since execution state was reset
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -9,54 +10,73 @@ domain_size = 30.0  # um
 wavelength = 0.532  # um
 k0 = 2 * np.pi / wavelength  # Free space wavevector
 n0 = 1.5  # Refractive index
-dx = domain_size / 2**7  # Grid spacing
+dx = domain_size / 2**8  # Grid spacing
 dz = dx  # Choose dz proportional to dx for stability
 
 # Grid size
 Nx = 2**7
-Nz = 160  # Number of propagation steps
+Nz = 200  # Number of propagation steps
 
-# Initialize field with a Gaussian beam
+# Initialize field with a **localized** 1D Gaussian beam at z = 0
 x = np.linspace(-domain_size / 2, domain_size / 2, Nx)
 z = np.linspace(0, dz * Nz, Nz)
 X, Z = np.meshgrid(x, z, indexing="ij")
 
 beam_width = 5.0  # Beam waist in um
-E = np.exp(-X**2 / beam_width**2).astype(np.complex128)  # Envelope field
+
+# Initialize E field with nonzero values only at z = 0 (source plane)
+E = np.zeros((Nx, Nz), dtype=np.complex128)
+E[:, 0] = np.exp(-x**2 / beam_width**2)  # 1D Gaussian beam at z = 0
 
 # Finite difference coefficients
 laplacian_coeff = 1 / dx**2
 propagation_coeff = dz / (2j * k0 * n0)
 
-# Storage for stability check
+# Storage for stability check and snapshots
 max_magnitude = []
+snapshots = []
+snapshot_intervals = np.linspace(1, Nz-1, 6, dtype=int)  # Capture 6 snapshots including initial and final
 
 # BPM Propagation Loop
-for zi in range(Nz):
+for zi in range(1, Nz):  # Start from zi=1 since zi=0 is the source
     # Second derivative in x using central difference
-    laplacian_E = np.roll(E, 1, axis=0) - 2 * E + np.roll(E, -1, axis=0)
+    laplacian_E = np.roll(E[:, zi-1], 1, axis=0) - 2 * E[:, zi-1] + np.roll(E[:, zi-1], -1, axis=0)
     laplacian_E *= laplacian_coeff
 
     # BPM update step
     dE_dz = (laplacian_E) * propagation_coeff
-    E += dE_dz
+    E[:, zi] = E[:, zi-1] + dE_dz  # Forward propagation
 
     # Record max field magnitude to check divergence
     max_magnitude.append(np.max(np.abs(E)))
 
-# Plot Results
-plt.figure(figsize=(10, 4))
-plt.subplot(1, 2, 1)
-plt.imshow(np.abs(E), extent=[0, domain_size, 0, dz * Nz], aspect="auto", cmap="inferno")
-plt.colorbar(label="Field Magnitude")
-plt.title("Final Beam Profile")
+    # Store snapshots
+    if zi in snapshot_intervals:
+        print(zi)
+        snapshots.append(np.abs(E.copy()))
 
-plt.subplot(1, 2, 2)
+# Plot BPM Propagation Snapshots
+fig, axes = plt.subplots(2, 3, figsize=(12, 6))
+
+for i, ax in enumerate(axes.flat):
+    im = ax.imshow(snapshots[i], 
+            extent=[0, domain_size, 0, dz * Nz], aspect="auto",
+            cmap="inferno", vmin=0, vmax=1)
+    ax.set_title(f"Step {snapshot_intervals[i]}")
+    ax.set_xlabel("x (um)")
+    ax.set_ylabel("Propagation z (um)")
+    fig.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
+
+plt.suptitle("BPM Propagation Snapshots")
+
+# Plot Stability Check
+plt.figure(figsize=(6, 4))
 plt.plot(max_magnitude)
 plt.xlabel("Propagation Step")
 plt.ylabel("Max |E|")
 plt.title("Numerical Stability Check")
 
 plt.show()
+
 
 # %%
