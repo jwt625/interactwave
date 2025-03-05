@@ -10,8 +10,8 @@ import { update_overlay } from './overlay'
 // FFT domain
 const levels = 7
 const N = 2 ** levels
-// const NH = Math.round(N / 4)
-const NH = Math.round(N)
+const NH = Math.round(N / 4)
+// const NH = Math.round(N)
 
 // resize 
 regl._gl.canvas.width = N
@@ -38,6 +38,34 @@ const parameters = {
 
 
 let temp_fbo = regl.framebuffer({
+    color: [
+        // regl.texture({ type: "float", width: N, height: NH, format: "rgba"}),
+        regl.texture({ width: N, height: NH, format: "rgba", mag:"nearest", min:"nearest"}),
+    ]
+})
+
+let temp_fbo_k1 = regl.framebuffer({
+    color: [
+        // regl.texture({ type: "float", width: N, height: NH, format: "rgba"}),
+        regl.texture({ width: N, height: NH, format: "rgba", mag:"nearest", min:"nearest"}),
+    ]
+})
+
+let temp_fbo_k2 = regl.framebuffer({
+    color: [
+        // regl.texture({ type: "float", width: N, height: NH, format: "rgba"}),
+        regl.texture({ width: N, height: NH, format: "rgba", mag:"nearest", min:"nearest"}),
+    ]
+})
+
+let temp_fbo_k3 = regl.framebuffer({
+    color: [
+        // regl.texture({ type: "float", width: N, height: NH, format: "rgba"}),
+        regl.texture({ width: N, height: NH, format: "rgba", mag:"nearest", min:"nearest"}),
+    ]
+})
+
+let temp_fbo_k4 = regl.framebuffer({
     color: [
         // regl.texture({ type: "float", width: N, height: NH, format: "rgba"}),
         regl.texture({ width: N, height: NH, format: "rgba", mag:"nearest", min:"nearest"}),
@@ -131,6 +159,12 @@ function stepSimulation() {
         rgb_fbos[i] = output[0];
         temp_fbo = output[1];
 
+        // Beam propagation method, RK4
+        // [rgb_fbos[i], temp_fbo, temp_fbo_k1, temp_fbo_k2, temp_fbo_k3, temp_fbo_k4] = BPM(
+        //     rgb_fbos[i], temp_fbo, temp_fbo_k1, temp_fbo_k2, temp_fbo_k3, temp_fbo_k4,
+        //     N, k0, dz, dx, 1.0, refractiveIndexTex);
+
+
         rgb_fbos_mag[i].use(function () {
             regl.clear({ depth: 1 });
             sample({ texture: rgb_fbos[i] });
@@ -149,7 +183,7 @@ function createRefractiveIndexTexture(regl, N) {
         for (let i = 0; i < N; i++) {            
             let x = i / N;
             let transition = (Math.abs(x - center) - width) / width;
-            let n = 1.0 + (1.01 - 1.0) * Math.exp(-transition * transition * 4.0); // Gaussian smoothing inside waveguide
+            let n = 1.0 + (1.0 - 1.0) * Math.exp(-transition * transition * 4.0); // Gaussian smoothing inside waveguide
 
             // Encode refractive index into 8-bit range (assuming max n = 5.0)
             let index = j * N + i;

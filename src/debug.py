@@ -13,14 +13,14 @@ n0 = 1.5  # Refractive index
 Nx = 2**7
 dx = domain_size / Nx  # Grid spacing
 dz = dx  # Choose dz proportional to dx for stability
-Nz = 200  # Number of propagation steps
+Nz = 2000  # Number of propagation steps
 
 # Initialize field with a **localized** 1D Gaussian beam at z = 0
 x = np.linspace(-domain_size / 2, domain_size / 2, Nx)
 z = np.linspace(0, dz * Nz, Nz)
 X, Z = np.meshgrid(x, z, indexing="ij")
 
-beam_width = 1.0  # Beam waist in um
+beam_width = 5.0  # Beam waist in um
 
 # Initialize E field with nonzero values only at z = 0 (source plane)
 E = np.zeros((Nx, Nz), dtype=np.complex128)
@@ -40,7 +40,7 @@ def compute_dE_dz(E_slice):
 # Modify the source to include a small quadratic phase for focusing
 
 # Define the focal length for the quadratic phase
-focal_length = -4000.0  # Adjust to control focusing behavior
+focal_length = -200.0  # Adjust to control focusing behavior
 
 # Apply a quadratic phase at the source plane (z = 0)
 quadratic_phase = np.exp(-1j * (k0 / (2 * focal_length)) * x**2)
@@ -68,6 +68,7 @@ for zi in range(1, Nz):  # Start from zi=1 since zi=0 is the source
 
     # Store snapshots
     if zi in snapshot_intervals:
+        print(zi)
         snapshots.append(np.abs(E.copy()))
 
 # Plot BPM Propagation Snapshots

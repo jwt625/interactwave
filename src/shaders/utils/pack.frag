@@ -43,3 +43,10 @@ vec4 vec2rgba(vec2 vec){
         dy+0.5
     );
 }
+
+// dE/dz calculation for FD-BPM
+vec2 compute_dE_dz(vec2 E, vec2 E_left, vec2 E_right, float delta_n, float k0, float n0, float dx, float dz) {
+    vec2 d2E_dx2 = (E_left - 2.0 * E + E_right) / (dx * dx);
+    vec2 dE_dz = (d2E_dx2 + k0 * k0 * delta_n * E) * (dz / (2.0 * k0 * n0));
+    return vec2(dE_dz.y, -dE_dz.x); // Apply j multiplication
+}

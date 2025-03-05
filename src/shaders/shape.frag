@@ -35,7 +35,7 @@ void main(){
     x *= float(smoothstep(0.0, 0.06, r));
 
     // Inject the source at the bottom
-    x = mix(x, u, step(1.0 - 10.0 / float(N), uv.y));
+    x = mix(x, u, step(1.0 - 1.0 / float(N), uv.y));
 
     // Apply lens phase shift at lens_z
     if (abs(uv.y - lens_z) < 1.0 / float(N)) {
