@@ -8,11 +8,11 @@ domain_size = 30.0  # um
 wavelength = 0.532  # um
 k0 = 2 * np.pi / wavelength  # Free space wavevector
 n0 = 1.5  # Refractive index
-dx = domain_size / 2**8  # Grid spacing
-dz = dx  # Choose dz proportional to dx for stability
 
 # Grid size
 Nx = 2**7
+dx = domain_size / Nx  # Grid spacing
+dz = dx  # Choose dz proportional to dx for stability
 Nz = 200  # Number of propagation steps
 
 # Initialize field with a **localized** 1D Gaussian beam at z = 0
@@ -20,7 +20,7 @@ x = np.linspace(-domain_size / 2, domain_size / 2, Nx)
 z = np.linspace(0, dz * Nz, Nz)
 X, Z = np.meshgrid(x, z, indexing="ij")
 
-beam_width = 2.0  # Beam waist in um
+beam_width = 1.0  # Beam waist in um
 
 # Initialize E field with nonzero values only at z = 0 (source plane)
 E = np.zeros((Nx, Nz), dtype=np.complex128)
@@ -35,6 +35,16 @@ def compute_dE_dz(E_slice):
     laplacian_E = np.roll(E_slice, 1, axis=0) - 2 * E_slice + np.roll(E_slice, -1, axis=0)
     laplacian_E *= laplacian_coeff
     return laplacian_E * propagation_coeff
+
+
+# Modify the source to include a small quadratic phase for focusing
+
+# Define the focal length for the quadratic phase
+focal_length = -4000.0  # Adjust to control focusing behavior
+
+# Apply a quadratic phase at the source plane (z = 0)
+quadratic_phase = np.exp(-1j * (k0 / (2 * focal_length)) * x**2)
+E[:, 0] *= quadratic_phase  # Multiply initial beam by phase factor
 
 # Storage for stability check and snapshots
 max_magnitude = []
@@ -58,7 +68,6 @@ for zi in range(1, Nz):  # Start from zi=1 since zi=0 is the source
 
     # Store snapshots
     if zi in snapshot_intervals:
-        print(zi)
         snapshots.append(np.abs(E.copy()))
 
 # Plot BPM Propagation Snapshots
@@ -66,21 +75,21 @@ fig, axes = plt.subplots(2, 3, figsize=(12, 6))
 
 for i, ax in enumerate(axes.flat):
     im = ax.imshow(snapshots[i], 
-            extent=[0, domain_size, 0, dz * Nz], aspect="auto",
+            extent=[0, dz * Nz, 0, domain_size], aspect="auto",
             cmap="inferno", vmin=0, vmax=1)
     ax.set_title(f"Step {snapshot_intervals[i]}")
-    ax.set_xlabel("x (um)")
-    ax.set_ylabel("Propagation z (um)")
+    ax.set_ylabel("x (um)")
+    ax.set_xlabel("Propagation z (um)")
     fig.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
 
-plt.suptitle("BPM Propagation Snapshots (RK4)")
+plt.suptitle("BPM Propagation with Quadratic Phase (Focusing)")
 
 # Plot Stability Check
 plt.figure(figsize=(6, 4))
 plt.plot(max_magnitude)
 plt.xlabel("Propagation Step")
 plt.ylabel("Max |E|")
-plt.title("Numerical Stability Check (RK4)")
+plt.title("Numerical Stability Check (Focusing)")
 
 plt.show()
 
