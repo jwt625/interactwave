@@ -63,52 +63,106 @@ def generate_waveguide_n_r2(x, z, l, L, w, n_WG, n0):
         n_r2[in_wg, iz] = n_WG**2
     return n_r2
 
-
 def fundamental_mode_source(x, w, n_WG, n0, wavelength):
     """
     Returns the normalized fundamental TE mode profile for a symmetric slab waveguide.
     
     The mode is given by:
-      E(x) = { cos(kx*x)                           for |x| <= w/2
-             { cos(kx*(w/2)) * exp[-kappa*(|x|-w/2)] for |x| > w/2
+      E(x) =  cos(kx*x)                                  for |x| <= w/2
+              cos(kx*(w/2)) * exp[-kappa*(|x|-w/2)]       for |x| > w/2
              
-    where kx = sqrt(n_WG^2*k0^2 - beta^2), kappa = sqrt(beta^2 - n0^2*k0^2),
-    and beta is obtained by solving:
-         kx * tan(kx*w/2) = kappa.
+    where:
+      k0 = 2*pi / wavelength
+      beta is the propagation constant for the fundamental mode,
+      kx = sqrt(n_WG^2 * k0^2 - beta^2),
+      kappa = sqrt(beta^2 - n0^2 * k0^2),
+      and beta satisfies:  kx * tan(kx*w/2) = kappa.
+
+    We scan all possible roots and pick the largest beta, which corresponds
+    to the fundamental (lowest-order) TE mode.
     """
     k0 = 2 * np.pi / wavelength
-    beta_min = n0 * k0
-    beta_max = n_WG * k0
 
     def f(beta):
-        kx = np.sqrt(n_WG**2 * k0**2 - beta**2)
-        kappa = np.sqrt(beta**2 - n0**2 * k0**2)
+        """Function whose root(s) define valid TE slab modes."""
+        # If beta is out of range or leads to imaginary kx/kappa, skip
+        if beta < n0*k0 or beta > n_WG*k0:
+            return None
+        inside = n_WG**2 * k0**2 - beta**2
+        outside = beta**2 - n0**2 * k0**2
+        if inside <= 0 or outside <= 0:
+            return None
+        
+        kx = np.sqrt(inside)
+        kappa = np.sqrt(outside)
         return kx * np.tan(kx * w / 2) - kappa
 
-    # Bisection method to solve for beta
-    beta = (beta_min + beta_max) / 2.0
-    for _ in range(100):
-        f_beta = f(beta)
-        if abs(f_beta) < 1e-6:
-            break
-        if f(beta_min) * f_beta < 0:
-            beta_max = beta
+    # 1) Find all roots via scanning
+    #    We'll sample a range of betas from n0*k0 up to n_WG*k0
+    N = 2000
+    beta_vals = np.linspace(n0*k0, n_WG*k0, N)
+    f_vals = []
+    for b in beta_vals:
+        val = f(b)
+        # If f(b) is invalid (None) or not real, store None
+        if val is None or np.isnan(val):
+            f_vals.append(None)
         else:
-            beta_min = beta
-        beta = (beta_min + beta_max) / 2.0
+            f_vals.append(val)
 
+    # 2) Identify intervals where sign changes occur
+    #    We'll store (b_left, b_right) for each sign change
+    sign_change_intervals = []
+    for i in range(N-1):
+        if (f_vals[i] is not None and f_vals[i+1] is not None):
+            if f_vals[i] * f_vals[i+1] < 0:
+                sign_change_intervals.append((beta_vals[i], beta_vals[i+1]))
+
+    # 3) For each interval, do a local bisection to refine the root
+    roots = []
+    for (b_left, b_right) in sign_change_intervals:
+        for _ in range(50):  # up to 50 bisection iterations
+            b_mid = 0.5*(b_left + b_right)
+            val_mid = f(b_mid)
+            if val_mid is None:
+                # If f(b_mid) is invalid, shrink the interval
+                b_right = b_mid
+                continue
+            if abs(val_mid) < 1e-9:
+                # Converged
+                roots.append(b_mid)
+                break
+            val_left = f(b_left)
+            # If val_left is None, treat it as same sign as val_mid
+            if val_left is None or val_left*val_mid > 0:
+                b_left = b_mid
+            else:
+                b_right = b_mid
+        else:
+            # If we never 'break' from the bisection, store the midpoint
+            roots.append(b_mid)
+
+    # 4) Pick the largest valid root (this is the fundamental TE0 mode)
+    if not roots:
+        raise ValueError("No valid slab mode found in [n0*k0, n_WG*k0].")
+
+    beta = max(roots)  # fundamental has the largest beta
+    # Now compute kx and kappa from that beta
     kx = np.sqrt(n_WG**2 * k0**2 - beta**2)
     kappa = np.sqrt(beta**2 - n0**2 * k0**2)
 
+    # 5) Construct the field profile
     E = np.zeros_like(x, dtype=np.complex128)
     for i, xi in enumerate(x):
         if abs(xi) <= w / 2:
             E[i] = np.cos(kx * xi)
         else:
             E[i] = np.cos(kx * (w / 2)) * np.exp(-kappa * (abs(xi) - w / 2))
-    # Normalize the mode
+
+    # 6) Normalize the mode
     norm = np.sqrt(np.trapz(np.abs(E)**2, x))
-    return E / norm
+    E /= norm
+    return E
 
 
 # ================================
@@ -158,7 +212,7 @@ n_WG = 1.1
 # S-bend parameters:
 l = 10.0   # total lateral offset in microns at z=L
 L = 150.0   # length of the S-bend in microns
-w = 4    # waveguide width in microns
+w = 1    # waveguide width in microns
 
 n_r2 = generate_waveguide_n_r2(x, z, l, L, w, n_WG, n0)
 
