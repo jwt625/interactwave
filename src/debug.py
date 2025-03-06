@@ -4,7 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 # Physical parameters
-domain_size = 30.0  # um
+domain_size = 100.0  # um
 wavelength = 0.532  # um
 k0 = 2 * np.pi / wavelength  # Free space wavevector
 
@@ -19,16 +19,17 @@ x = np.linspace(-domain_size / 2, domain_size / 2, Nx)
 z = np.linspace(0, dz * Nz, Nz)
 X, Z = np.meshgrid(x, z, indexing="ij")
 
-beam_width = 1.0  # Beam waist in um
+beam_width = 20.0  # Beam waist in um
 
 # Typical lens parameters
-lens_diameter = 20.0        # microns
+lens_diameter = 30.0        # microns
 lens_thickness = 3.0        # microns
-R1 = 40.0                   # radius of curvature for first surface
-R2 = 40.0                   # radius of curvature for second surface
-n_lens = 1.001              # lens refractive index
-n0 = 1.001                   # background refractive index
-lens_center_z = 12.0        # center of lens along z in microns
+R1 = 80.0                   # radius of curvature for first surface
+R2 = 80.0                   # radius of curvature for second surface
+n_lens = 1.50              # lens refractive index
+n0 = 1.00                   # background refractive index
+lens_center_z = 30.0        # center of lens along z in microns
+x_lens = 0.0        # center of lens along x in microns
 
 # Create an array for n_r^2 everywhere; default to n0^2 (outside the lens)
 n_r2 = np.full((Nx, Nz), n0**2, dtype=np.float64)
@@ -42,13 +43,13 @@ z1 = lens_center_z - lens_thickness/2
 z2 = lens_center_z + lens_thickness/2
 
 # We'll create arrays z_first(x) and z_second(x).
-z_first = z1 + (R1 - np.sqrt(R1**2 - x**2))  # shape = (Nx,)
-z_second = z2 - (R2 - np.sqrt(R2**2 - x**2)) # shape = (Nx,)
+z_first = z1 + (R1 - np.sqrt(R1**2 - (x-x_lens)**2))  # shape = (Nx,)
+z_second = z2 - (R2 - np.sqrt(R2**2 - (x-x_lens)**2)) # shape = (Nx,)
 
 # Now fill n_r2 where we are "inside" the lens
 for ix in range(Nx):
     # skip if x is outside lens diameter
-    if abs(x[ix]) > lens_diameter/2:
+    if abs(x[ix]-x_lens) > lens_diameter/2:
         continue
     
     # The lens surfaces in z for this x
@@ -130,6 +131,17 @@ for zi in range(1, Nz):
 fig, axes = plt.subplots(2, 3, figsize=(12, 6))
 
 for i, ax in enumerate(axes.flat):
+    if i == 0:
+        # Plot n_r2. Note the transpose (.T) to put x on the horizontal axis.
+        im = ax.imshow(np.sqrt(n_r2.T), 
+                        extent=[x[0], x[-1], z[0], z[-1]], 
+                        origin='lower', 
+                        aspect='auto', 
+                        cmap='viridis')
+        ax.set_xlabel("x (um)")
+        ax.set_ylabel("z (um)")
+        ax.set_title("Lens Refractive Index Distribution (n_r)")
+        continue
     im = ax.imshow(snapshots[i].T, 
             extent=[x[0], x[-1], z[0], z[-1]], aspect="auto",
             cmap="inferno", vmin=0, vmax=1,
@@ -150,7 +162,7 @@ plt.title("Numerical Stability Check (Focusing)")
 
 plt.show()
 
-# %%
+# %% plot n
 plt.figure(figsize=(7, 5))
 
 # Plot n_r2. Note the transpose (.T) to put x on the horizontal axis.
@@ -165,5 +177,22 @@ plt.xlabel("x (um)")
 plt.ylabel("z (um)")
 plt.title("Lens Refractive Index Distribution (n_r)")
 plt.show()
+
+# %% big plot of the final beam
+plt.figure(figsize=(7, 7))
+
+# Plot n_r2. Note the transpose (.T) to put x on the horizontal axis.
+im = plt.imshow(snapshots[-1].T, 
+                extent=[x[0], x[-1], z[0], z[-1]], 
+                origin='lower', 
+                aspect='auto', 
+                # cmap='viridis',
+                cmap="inferno")
+
+# plt.colorbar(im)
+plt.xlabel("x (um)")
+plt.ylabel("z (um)")
+plt.show()
+
 
 # %%
