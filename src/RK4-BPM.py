@@ -63,6 +63,54 @@ def generate_waveguide_n_r2(x, z, l, L, w, n_WG, n0):
         n_r2[in_wg, iz] = n_WG**2
     return n_r2
 
+
+def fundamental_mode_source(x, w, n_WG, n0, wavelength):
+    """
+    Returns the normalized fundamental TE mode profile for a symmetric slab waveguide.
+    
+    The mode is given by:
+      E(x) = { cos(kx*x)                           for |x| <= w/2
+             { cos(kx*(w/2)) * exp[-kappa*(|x|-w/2)] for |x| > w/2
+             
+    where kx = sqrt(n_WG^2*k0^2 - beta^2), kappa = sqrt(beta^2 - n0^2*k0^2),
+    and beta is obtained by solving:
+         kx * tan(kx*w/2) = kappa.
+    """
+    k0 = 2 * np.pi / wavelength
+    beta_min = n0 * k0
+    beta_max = n_WG * k0
+
+    def f(beta):
+        kx = np.sqrt(n_WG**2 * k0**2 - beta**2)
+        kappa = np.sqrt(beta**2 - n0**2 * k0**2)
+        return kx * np.tan(kx * w / 2) - kappa
+
+    # Bisection method to solve for beta
+    beta = (beta_min + beta_max) / 2.0
+    for _ in range(100):
+        f_beta = f(beta)
+        if abs(f_beta) < 1e-6:
+            break
+        if f(beta_min) * f_beta < 0:
+            beta_max = beta
+        else:
+            beta_min = beta
+        beta = (beta_min + beta_max) / 2.0
+
+    kx = np.sqrt(n_WG**2 * k0**2 - beta**2)
+    kappa = np.sqrt(beta**2 - n0**2 * k0**2)
+
+    E = np.zeros_like(x, dtype=np.complex128)
+    for i, xi in enumerate(x):
+        if abs(xi) <= w / 2:
+            E[i] = np.cos(kx * xi)
+        else:
+            E[i] = np.cos(kx * (w / 2)) * np.exp(-kappa * (abs(xi) - w / 2))
+    # Normalize the mode
+    norm = np.sqrt(np.trapz(np.abs(E)**2, x))
+    return E / norm
+
+
 # ================================
 # Main simulation setup
 # ================================
@@ -75,15 +123,14 @@ k0 = 2 * np.pi / wavelength  # Free space wavevector
 # Grid size
 Nx = 2**9
 dx = domain_size / Nx     # Grid spacing
-dz = dx                 # Choose dz proportional to dx for stability
-Nz = 1000               # Number of propagation steps
+dz = 3*dx                 # Choose dz proportional to dx for stability
+Nz = 300               # Number of propagation steps
 
 # Create spatial grids
 x = np.linspace(-domain_size / 2, domain_size / 2, Nx)
 z = np.linspace(0, dz * Nz, Nz)
 X, Z = np.meshgrid(x, z, indexing="ij")
 
-beam_width = 4.0  # Beam waist in um
 
 # ================================
 # Refractive index distribution setup
@@ -111,7 +158,7 @@ n_WG = 1.1
 # S-bend parameters:
 l = 10.0   # total lateral offset in microns at z=L
 L = 150.0   # length of the S-bend in microns
-w = 5.0    # waveguide width in microns
+w = 4    # waveguide width in microns
 
 n_r2 = generate_waveguide_n_r2(x, z, l, L, w, n_WG, n0)
 
@@ -119,12 +166,21 @@ n_r2 = generate_waveguide_n_r2(x, z, l, L, w, n_WG, n0)
 # Initialize the input field E (Gaussian beam at z=0)
 # ================================
 E = np.zeros((Nx, Nz), dtype=np.complex128)
-E[:, 0] = np.exp(-x**2 / beam_width**2)
 
-# Optionally apply a quadratic phase for additional focusing
-focal_length = -200.0  # Adjust to control focusing behavior
-quadratic_phase = np.exp(-1j * (k0 / (2 * focal_length)) * x**2)
-E[:, 0] *= quadratic_phase
+# ===========
+# mode source
+# ===========
+# Gaussian beam with curvature
+# beam_width = 4.0  # Beam waist in um
+# E[:, 0] = np.exp(-x**2 / beam_width**2)
+# # Optionally apply a quadratic phase for additional focusing
+# focal_length = -200.0  # Adjust to control focusing behavior
+# quadratic_phase = np.exp(-1j * (k0 / (2 * focal_length)) * x**2)
+# E[:, 0] *= quadratic_phase
+
+# waveguide mode
+E[:, 0] = fundamental_mode_source(x, w, n_WG, n0, wavelength)
+
 
 # ================================
 # BPM propagation parameters and function
@@ -223,4 +279,27 @@ plt.ylabel("z (um)")
 plt.title("Final Beam Intensity")
 plt.show()
 
+# %% check mode source
+import matplotlib.pyplot as plt
+import plotly.tools as tls
+import plotly.io as pio
+
+
+# Create a matplotlib figure with a legend and custom font sizes
+plt.rcParams.update({'font.size': 14})  # Global font size for text elements
+fig, ax = plt.subplots()
+ax.plot(x, E[:, 0])
+# ax.plot(x, n_r2_slice)
+
+
+# Convert the matplotlib figure to a Plotly figure
+plotly_fig = tls.mpl_to_plotly(fig)
+
+# Optionally update the legend font size in the Plotly figure layout
+plotly_fig.update_layout(
+    legend=dict(font=dict(size=12))
+)
+
+# Display the Plotly figure
+pio.show(plotly_fig)
 # %%
