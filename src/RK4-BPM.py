@@ -69,33 +69,24 @@ def slab_mode_source(x, w, n_WG, n0, wavelength, ind_m=0):
     Returns the normalized TE mode profile of a symmetric slab waveguide for the
     specified mode index (ind_m). Modes are computed from the dispersion relations:
     
-      Even (symmetric) modes:  kx * tan(kx*w/2) - kappa = 0,
-      Odd  (antisymmetric) modes: - kx * cot(kx*w/2) - kappa = 0,
+      Even modes: f_even(beta) = kx * tan(kx*w/2) - kappa = 0,
+      Odd  modes: f_odd(beta)  = -kx * cot(kx*w/2) - kappa = 0,
       
     where:
       k0 = 2*pi / wavelength,
       kx = sqrt(n_WG^2 * k0^2 - beta^2),
       kappa = sqrt(beta^2 - n0^2 * k0^2).
+
+    This solver partitions the search into continuous branches by checking that the
+    parameter theta = kx*w/2 lies in the appropriate interval:
+      - For even modes: theta in [j*pi, j*pi + pi/2] for some even j (j=0 for fundamental).
+      - For odd modes:  theta in [j*pi + pi/2, (j+1)*pi] for some even j.
       
-    The function scans for all roots (beta) in the interval [n0*k0, n_WG*k0],
-    labels each as 'even' or 'odd', sorts them in descending order of beta 
-    (largest beta is the fundamental mode), and then returns the field profile.
-    
-    For even modes:
-      E(x) = cos(kx*x)       for |x| <= w/2,
-             cos(kx*(w/2))*exp[-kappa*(|x|-w/2)]  for |x| > w/2.
-             
-    For odd modes:
-      E(x) = sin(kx*x)       for |x| <= w/2,
-             sign(x)*sin(kx*(w/2))*exp[-kappa*(|x|-w/2)]  for |x| > w/2.
-    
-    If the requested mode index is out of range, a warning is issued and the highest
-    available mode is used.
+    If the requested mode index is out of range, a warning is issued.
     """
     k0 = 2 * np.pi / wavelength
 
     def f_even(beta):
-        # Dispersion function for even modes.
         if beta < n0*k0 or beta > n_WG*k0:
             return None
         inside = n_WG**2 * k0**2 - beta**2
@@ -107,7 +98,6 @@ def slab_mode_source(x, w, n_WG, n0, wavelength, ind_m=0):
         return kx * np.tan(kx * w / 2) - kappa
 
     def f_odd(beta):
-        # Dispersion function for odd modes.
         if beta < n0*k0 or beta > n_WG*k0:
             return None
         inside = n_WG**2 * k0**2 - beta**2
@@ -116,84 +106,95 @@ def slab_mode_source(x, w, n_WG, n0, wavelength, ind_m=0):
             return None
         kx = np.sqrt(inside)
         kappa = np.sqrt(outside)
-        # Use cot(x) = cos(x)/sin(x); be careful when sin is near zero.
         sin_term = np.sin(kx * w / 2)
         if abs(sin_term) < 1e-12:
             return None
         return - kx * (np.cos(kx * w / 2) / sin_term) - kappa
+    
+    def valid_even(beta):
+        inside = n_WG**2 * k0**2 - beta**2
+        if inside <= 0:
+            return False
+        kx = np.sqrt(inside)
+        theta = kx * w / 2
+        m = int(np.floor(2 * theta / np.pi))
+        # For even modes, require that m is even.
+        # Additionally, for the fundamental (m == 0), reject if theta is too close to pi/2.
+        if m % 2 == 0:
+            if m == 0 and theta > (np.pi/2 - 0.1):
+                return False
+            return True
+        return False
 
-    # Scan beta over the allowed interval
+    def valid_odd(beta):
+        inside = n_WG**2 * k0**2 - beta**2
+        if inside <= 0:
+            return False
+        kx = np.sqrt(inside)
+        theta = kx * w / 2
+        m = int(np.floor(2 * theta / np.pi))
+        # Accept candidate if its branch index m is odd.
+        return (m % 2 == 1)
+
+
     N = 2000
     beta_scan = np.linspace(n0*k0, n_WG*k0, N)
-    even_roots = []
-    odd_roots = []
-    
-    # Evaluate f_even on the grid.
-    f_even_vals = [f_even(b) for b in beta_scan]
-    # Find sign changes for even modes.
     even_intervals = []
+    odd_intervals = []
+    f_even_vals = [f_even(b) for b in beta_scan]
+    f_odd_vals = [f_odd(b) for b in beta_scan]
     for i in range(N-1):
         if (f_even_vals[i] is not None) and (f_even_vals[i+1] is not None):
             if f_even_vals[i] * f_even_vals[i+1] < 0:
                 even_intervals.append((beta_scan[i], beta_scan[i+1]))
-                
-    # Evaluate f_odd on the grid.
-    f_odd_vals = [f_odd(b) for b in beta_scan]
-    # Find sign changes for odd modes.
-    odd_intervals = []
-    for i in range(N-1):
         if (f_odd_vals[i] is not None) and (f_odd_vals[i+1] is not None):
             if f_odd_vals[i] * f_odd_vals[i+1] < 0:
                 odd_intervals.append((beta_scan[i], beta_scan[i+1]))
-    
-    # Refine roots via bisection.
+                
     def refine_root(f, b_left, b_right):
         for _ in range(50):
-            b_mid = 0.5 * (b_left + b_right)
+            b_mid = 0.5*(b_left+b_right)
             val_mid = f(b_mid)
             if val_mid is None:
-                # Adjust interval slightly if function returns None.
                 b_right = b_mid
                 continue
             if abs(val_mid) < 1e-9:
                 return b_mid
             val_left = f(b_left)
-            if (val_left is None) or (val_left * val_mid > 0):
+            if val_left is None or val_left*val_mid > 0:
                 b_left = b_mid
             else:
                 b_right = b_mid
         return b_mid
 
+    even_roots = []
     for (b_left, b_right) in even_intervals:
-        even_roots.append(refine_root(f_even, b_left, b_right))
+        root = refine_root(f_even, b_left, b_right)
+        if valid_even(root):
+            even_roots.append(root)
+    odd_roots = []
     for (b_left, b_right) in odd_intervals:
-        odd_roots.append(refine_root(f_odd, b_left, b_right))
-    
-    # Combine roots with labels.
+        root = refine_root(f_odd, b_left, b_right)
+        if valid_odd(root):
+            odd_roots.append(root)
+
     modes = [("even", r) for r in even_roots] + [("odd", r) for r in odd_roots]
-    # Sort modes in descending order of beta (largest beta first).
     modes_sorted = sorted(modes, key=lambda tup: tup[1], reverse=True)
-    
     if len(modes_sorted) == 0:
         raise ValueError("No guided slab modes found in [n0*k0, n_WG*k0].")
-    
     if ind_m >= len(modes_sorted):
         warnings.warn(
-            f"Requested mode index {ind_m} >= number of found modes ({len(modes_sorted)}). "
-            f"Using highest available index {len(modes_sorted)-1} instead.",
+            f"Requested mode index {ind_m} >= found modes ({len(modes_sorted)}). Using highest mode index {len(modes_sorted)-1}.",
             UserWarning
         )
         ind_m = len(modes_sorted) - 1
-    
+
     parity, beta_chosen = modes_sorted[ind_m]
-    
-    # Compute kx and kappa from the selected beta.
     inside = n_WG**2 * k0**2 - beta_chosen**2
     outside = beta_chosen**2 - n0**2 * k0**2
     kx = np.sqrt(inside)
     kappa = np.sqrt(outside)
-    
-    # Construct the field profile.
+
     E = np.zeros_like(x, dtype=np.complex128)
     if parity == "even":
         for i, xi in enumerate(x):
@@ -201,33 +202,30 @@ def slab_mode_source(x, w, n_WG, n0, wavelength, ind_m=0):
                 E[i] = np.cos(kx * xi)
             else:
                 E[i] = np.cos(kx * (w/2)) * np.exp(-kappa * (abs(xi)-w/2))
-    else:  # odd mode
+    else:
         for i, xi in enumerate(x):
             if abs(xi) <= w/2:
                 E[i] = np.sin(kx * xi)
             else:
                 E[i] = np.sign(xi) * np.sin(kx * (w/2)) * np.exp(-kappa * (abs(xi)-w/2))
-    
-    # Normalize the mode.
     norm = np.sqrt(np.trapz(np.abs(E)**2, x))
     E /= norm
-    return E, modes_sorted
-
+    return E
 
 # ================================
 # Main simulation setup
 # ================================
 
 # Physical parameters
-domain_size = 100.0  # um
+domain_size = 50.0  # um
 wavelength = 0.532   # um
 k0 = 2 * np.pi / wavelength  # Free space wavevector
 
 # Grid size
-Nx = 2**9
+Nx = 2**8
 dx = domain_size / Nx     # Grid spacing
 dz = 3*dx                 # Choose dz proportional to dx for stability
-Nz = 300               # Number of propagation steps
+Nz = 1000               # Number of propagation steps
 
 # Create spatial grids
 x = np.linspace(-domain_size / 2, domain_size / 2, Nx)
@@ -259,9 +257,9 @@ X, Z = np.meshgrid(x, z, indexing="ij")
 n0 = 1.0
 n_WG = 1.1
 # S-bend parameters:
-l = 10.0   # total lateral offset in microns at z=L
-L = 150.0   # length of the S-bend in microns
-w = 2    # waveguide width in microns
+l = 20.0   # total lateral offset in microns at z=L
+L = 200.0   # length of the S-bend in microns
+w = 5    # waveguide width in microns
 
 n_r2 = generate_waveguide_n_r2(x, z, l, L, w, n_WG, n0)
 
@@ -282,8 +280,8 @@ E = np.zeros((Nx, Nz), dtype=np.complex128)
 # E[:, 0] *= quadratic_phase
 
 # waveguide mode
-E[:, 0], tmp = slab_mode_source(x, w=w, n_WG=n_WG, n0=n0, 
-    wavelength=wavelength, ind_m=0)
+E[:, 0] = slab_mode_source(x, w=w, n_WG=n_WG, n0=n0,
+    wavelength=wavelength, ind_m=3)
 
 
 # ================================
@@ -417,22 +415,22 @@ import warnings
 
 # Define transverse coordinate and waveguide parameters
 x = np.linspace(-10, 10, 1000)  # Adjust the range and resolution as needed
-w = 4.0        # Waveguide width in microns
+w = 5.0        # Waveguide width in microns
 n_WG = 1.1     # Core refractive index
 n0 = 1.0       # Cladding refractive index
 wavelength = 0.532  # in microns
 
 # Calculate up to 10 modes (indices 0 through 9)
-num_modes = 4
+num_modes = 5
 mode_fields = []
 mode_indices = []
 
 for m in range(num_modes):
     try:
-        E_mode, tmp = slab_mode_source(x, w, n_WG, n0, wavelength, ind_m=m)
+        E_mode = slab_mode_source(x, w, n_WG, n0, wavelength, ind_m=m)
         mode_fields.append(E_mode)
         mode_indices.append(m)
-        print(tmp)
+        # print(tmp)
     except Exception as err:
         warnings.warn(f"Mode {m} not found: {err}. Stopping mode search.")
         break
@@ -441,7 +439,7 @@ for m in range(num_modes):
 plt.rcParams.update({'font.size': 14})
 fig, ax = plt.subplots(figsize=(8, 6))
 for i, E_mode in enumerate(mode_fields):
-    ax.plot(x, np.real(E_mode), label=f"Mode {mode_indices[i]}")
+    ax.plot(x, np.real(E_mode) + i, label=f"Mode {mode_indices[i]}")
 ax.set_xlabel("x (µm)")
 ax.set_ylabel("Field amplitude (Real part)")
 ax.set_title("Slab Waveguide TE Modes")
