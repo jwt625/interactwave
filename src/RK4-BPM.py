@@ -281,7 +281,26 @@ E = np.zeros((Nx, Nz), dtype=np.complex128)
 
 # waveguide mode
 E[:, 0] = slab_mode_source(x, w=w, n_WG=n_WG, n0=n0,
-    wavelength=wavelength, ind_m=3)
+    wavelength=wavelength, ind_m=1)
+
+
+
+# PML
+# Define the PML thickness (in grid points) and compute its physical width.
+pml_thickness = int(5 * wavelength / dx)  # e.g., 5 wavelengths thick
+pml_width = pml_thickness * dx
+
+# Determine the x position at which the PML starts (on both sides).
+x_edge = domain_size / 2 - pml_width
+
+# Create the damping profile sigma(x) for the transverse coordinate.
+# sigma is zero in the interior and rises smoothly (quadratically) in the PML region.
+sigma_max = 1.0  # Adjustable absorption strength
+sigma_x = np.where(np.abs(x) > x_edge,
+                   sigma_max * ((np.abs(x) - x_edge) / pml_width) ** 2,
+                   0)
+
+
 
 
 # ================================
@@ -303,8 +322,9 @@ def compute_dE_dz(E_slice, n_r2_slice):
     
     laplacian_term = laplacian_factor * laplacian_E
     index_term = index_factor * (n_r2_slice - n0**2) * E_slice
+    damping_term = - sigma_x * E_slice  # PML damping term
     
-    return laplacian_term + index_term
+    return laplacian_term + index_term + damping_term
 
 # ================================
 # BPM Propagation Loop with RK4
@@ -369,7 +389,7 @@ plt.ylabel("Max |E|")
 plt.title("Numerical Stability Check")
 plt.show()
 
-# Plot the final beam intensity
+# %% Plot the final beam intensity
 plt.figure(figsize=(7, 7))
 im = plt.imshow(snapshots[-1].T,
                 extent=[x[0], x[-1], z[0], z[-1]],
@@ -380,6 +400,37 @@ plt.xlabel("x (um)")
 plt.ylabel("z (um)")
 plt.title("Final Beam Intensity")
 plt.show()
+
+
+#%% debug PML
+import numpy as np
+import matplotlib.pyplot as plt
+
+# Assuming the following variables are defined:
+# wavelength, dx, domain_size, and x (the x-grid)
+
+# Define PML parameters
+pml_thickness = int(5 * wavelength / dx)  # e.g., 5 wavelengths thick
+pml_width = pml_thickness * dx
+x_edge = domain_size / 2 - pml_width       # x position where PML begins
+sigma_max = 5.0                          # maximum damping strength
+
+# Compute sigma_x: zero in interior, quadratic rise in PML regions.
+sigma_x = np.where(np.abs(x) > x_edge,
+                   sigma_max * ((np.abs(x) - x_edge) / pml_width) ** 2,
+                   0)
+
+# Plot sigma_x versus x
+plt.figure(figsize=(8, 4))
+plt.plot(x, sigma_x, label=r'$\sigma(x)$', lw=2)
+plt.xlabel("x (µm)")
+plt.ylabel(r'$\sigma(x)$')
+plt.title("PML Damping Profile")
+plt.legend()
+plt.grid(True)
+plt.show()
+
+
 
 # %% check mode source
 import matplotlib.pyplot as plt
@@ -404,6 +455,7 @@ plotly_fig.update_layout(
 
 # Display the Plotly figure
 pio.show(plotly_fig)
+
 
 
 # %% check waveguide modes
