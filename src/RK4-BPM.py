@@ -64,7 +64,79 @@ def generate_waveguide_n_r2(x, z, l, L, w, n_WG, n0):
         n_r2[in_wg, iz] = n_WG**2
     return n_r2
 
-def slab_mode_source(x, w, n_WG, n0, wavelength, ind_m=0):
+
+def generate_MMI_n_r2(x, z, z_MMI_start, L_MMI, w_MMI, w_wg, d, n_WG, n_MMI, n0):
+    """
+    Generate the squared refractive index (n_r^2) distribution for an MMI-based splitter.
+    
+    The structure consists of:
+      - Two input waveguides in the region z < z_MMI_start, with centers at x = -d/2 and x = d/2
+        and width w_wg (refractive index n_WG).
+      - A central MMI region for z_MMI_start <= z <= z_MMI_start + L_MMI,
+        which is a rectangular region of width w_MMI (refractive index n_MMI).
+      - Two output waveguides in the region z > (z_MMI_start + L_MMI), with the same positions
+        and dimensions as the input waveguides (n_WG).
+    
+    Parameters
+    ----------
+    x : 1D numpy array
+        The transverse coordinate (in µm).
+    z : 1D numpy array
+        The propagation coordinate (in µm).
+    z_MMI_start : float
+        z position where the MMI region begins.
+    L_MMI : float
+        Length of the MMI region along z (in µm).
+    w_MMI : float
+        Width of the MMI region (in µm).
+    w_wg : float
+        Width of the input and output waveguides (in µm).
+    d : float
+        Center-to-center separation between the two waveguides (in µm). (Waveguide centers are at –d/2 and d/2.)
+    n_WG : float
+        Refractive index of the input/output waveguides.
+    n_MMI : float
+        Refractive index of the MMI region.
+    n0 : float
+        Background refractive index.
+    
+    Returns
+    -------
+    n_r2 : 2D numpy array of shape (len(x), len(z))
+        The squared refractive index distribution.
+    """
+    import numpy as np
+    Nx = len(x)
+    Nz = len(z)
+    
+    # Create a 2D grid with x as rows and z as columns.
+    X, Z = np.meshgrid(x, z, indexing="ij")
+    
+    # Initialize with background index squared.
+    n_r2 = np.full((Nx, Nz), n0**2, dtype=np.float64)
+    
+    # Define z position where the MMI region ends.
+    z_MMI_end = z_MMI_start + L_MMI
+    
+    # Create mask for input waveguides: z < z_MMI_start.
+    # The waveguide centers are at x = -d/2 and x = d/2.
+    mask_input = (Z < z_MMI_start) & (((np.abs(X + d/2) <= w_wg/2) | (np.abs(X - d/2) <= w_wg/2)))
+    
+    # Create mask for the MMI region: z between z_MMI_start and z_MMI_end and |x| <= w_MMI/2.
+    mask_MMI = (Z >= z_MMI_start) & (Z <= z_MMI_end) & (np.abs(X) <= w_MMI/2)
+    
+    # Create mask for output waveguides: z > z_MMI_end.
+    mask_output = (Z > z_MMI_end) & (((np.abs(X + d/2) <= w_wg/2) | (np.abs(X - d/2) <= w_wg/2)))
+    
+    # Assign refractive index squared to the designated regions.
+    n_r2[mask_input] = n_WG**2
+    n_r2[mask_output] = n_WG**2
+    n_r2[mask_MMI]   = n_MMI**2
+    
+    return n_r2
+
+
+def slab_mode_source(x, w, n_WG, n0, wavelength, ind_m=0, x0=0):
     """
     Returns the normalized TE mode profile of a symmetric slab waveguide for the
     specified mode index (ind_m). Modes are computed from the dispersion relations:
@@ -198,16 +270,18 @@ def slab_mode_source(x, w, n_WG, n0, wavelength, ind_m=0):
     E = np.zeros_like(x, dtype=np.complex128)
     if parity == "even":
         for i, xi in enumerate(x):
-            if abs(xi) <= w/2:
-                E[i] = np.cos(kx * xi)
+            # Shift the coordinate by x0.
+            xp = xi - x0
+            if abs(xp) <= w/2:
+                E[i] = np.cos(kx * xp)
             else:
-                E[i] = np.cos(kx * (w/2)) * np.exp(-kappa * (abs(xi)-w/2))
+                E[i] = np.cos(kx * (w/2)) * np.exp(-kappa * (abs(xp)-w/2))
     else:
         for i, xi in enumerate(x):
-            if abs(xi) <= w/2:
-                E[i] = np.sin(kx * xi)
+            if abs(xp) <= w/2:
+                E[i] = np.sin(kx * xp)
             else:
-                E[i] = np.sign(xi) * np.sin(kx * (w/2)) * np.exp(-kappa * (abs(xi)-w/2))
+                E[i] = np.sign(xp) * np.sin(kx * (w/2)) * np.exp(-kappa * (abs(xp)-w/2))
     norm = np.sqrt(np.trapz(np.abs(E)**2, x))
     E /= norm
     return E
@@ -217,15 +291,15 @@ def slab_mode_source(x, w, n_WG, n0, wavelength, ind_m=0):
 # ================================
 
 # Physical parameters
-domain_size = 50.0  # um
+domain_size = 50  # um
 wavelength = 0.532   # um
 k0 = 2 * np.pi / wavelength  # Free space wavevector
 
 # Grid size
 Nx = 2**8
 dx = domain_size / Nx     # Grid spacing
-dz = 3*dx                 # Choose dz proportional to dx for stability
-Nz = 1000               # Number of propagation steps
+dz = 2*dx                 # Choose dz proportional to dx for stability
+Nz = 600               # Number of propagation steps
 
 # Create spatial grids
 x = np.linspace(-domain_size / 2, domain_size / 2, Nx)
@@ -253,15 +327,33 @@ X, Z = np.meshgrid(x, z, indexing="ij")
 # n_r2 = generate_lens_n_r2(x, z, lens_diameter, lens_thickness, R1, R2, n_lens, n0, lens_center_z, x_lens)
 
 # ----- Option 2: S-bend Waveguide -----
-# For testing the waveguide, we use n0=1 and n_WG=1.1.
-n0 = 1.0
-n_WG = 1.1
-# S-bend parameters:
-l = 20.0   # total lateral offset in microns at z=L
-L = 200.0   # length of the S-bend in microns
-w = 5    # waveguide width in microns
+# # For testing the waveguide, we use n0=1 and n_WG=1.1.
+# n0 = 1.0
+# n_WG = 1.1
+# # S-bend parameters:
+# l = 10.0   # total lateral offset in microns at z=L
+# L = 200.0   # length of the S-bend in microns
+# w = 1    # waveguide width in microns
+# n_r2 = generate_waveguide_n_r2(x, z, l, L, w, n_WG, n0)
 
-n_r2 = generate_waveguide_n_r2(x, z, l, L, w, n_WG, n0)
+# ----- Option 3: MMI splitter -----
+# MMI structure parameters:
+z_MMI_start = 50.0    # MMI region begins at z = 50 um
+L_MMI = 130.0          # MMI region length = 40 um
+w_MMI = 8.0          # MMI region width = 40 um
+w_wg = 2.0            # input/output waveguide width = 4 um
+d_wg = 4.0              # center-to-center separation of waveguides = 12 um
+
+# Refractive indices:
+n0 = 1.0
+n_WG = 1.1    # waveguide (input/output) index
+n_MMI = 1.1   # MMI region index (can be different, if desired)
+
+# Generate the refractive index distribution.
+n_r2 = generate_MMI_n_r2(x, z, z_MMI_start, L_MMI, w_MMI,
+        w_wg, d_wg, n_WG, n_MMI, n0)
+
+
 
 # ================================
 # Initialize the input field E (Gaussian beam at z=0)
@@ -280,8 +372,8 @@ E = np.zeros((Nx, Nz), dtype=np.complex128)
 # E[:, 0] *= quadratic_phase
 
 # waveguide mode
-E[:, 0] = slab_mode_source(x, w=w, n_WG=n_WG, n0=n0,
-    wavelength=wavelength, ind_m=1)
+E[:, 0] = slab_mode_source(x, w=w_wg, n_WG=n_WG, n0=n0,
+    wavelength=wavelength, ind_m=0, x0=d_wg/2)
 
 
 
@@ -295,13 +387,10 @@ x_edge = domain_size / 2 - pml_width
 
 # Create the damping profile sigma(x) for the transverse coordinate.
 # sigma is zero in the interior and rises smoothly (quadratically) in the PML region.
-sigma_max = 1.0  # Adjustable absorption strength
+sigma_max = 0.5  # Adjustable absorption strength
 sigma_x = np.where(np.abs(x) > x_edge,
                    sigma_max * ((np.abs(x) - x_edge) / pml_width) ** 2,
                    0)
-
-
-
 
 # ================================
 # BPM propagation parameters and function
@@ -395,7 +484,7 @@ im = plt.imshow(snapshots[-1].T,
                 extent=[x[0], x[-1], z[0], z[-1]],
                 origin='lower',
                 aspect='auto',
-                cmap="inferno")
+                cmap="inferno", vmin=0, vmax=1)
 plt.xlabel("x (um)")
 plt.ylabel("z (um)")
 plt.title("Final Beam Intensity")
@@ -413,7 +502,7 @@ import matplotlib.pyplot as plt
 pml_thickness = int(5 * wavelength / dx)  # e.g., 5 wavelengths thick
 pml_width = pml_thickness * dx
 x_edge = domain_size / 2 - pml_width       # x position where PML begins
-sigma_max = 5.0                          # maximum damping strength
+sigma_max = 0.5                          # maximum damping strength
 
 # Compute sigma_x: zero in interior, quadratic rise in PML regions.
 sigma_x = np.where(np.abs(x) > x_edge,
@@ -429,6 +518,11 @@ plt.title("PML Damping Profile")
 plt.legend()
 plt.grid(True)
 plt.show()
+
+
+
+
+
 
 
 
@@ -455,6 +549,10 @@ plotly_fig.update_layout(
 
 # Display the Plotly figure
 pio.show(plotly_fig)
+
+
+
+
 
 
 
@@ -501,6 +599,44 @@ ax.legend()
 plotly_fig = tls.mpl_to_plotly(fig)
 plotly_fig.update_layout(legend=dict(font=dict(size=12)))
 pio.show(plotly_fig)
+
+
+# %% check MMI
+import numpy as np
+import matplotlib.pyplot as plt
+
+# Simulation parameters
+domain_size = 100.0   # um, transverse extent
+z_total = 200.0       # um, propagation distance
+Nx = 512
+Nz = 512
+x = np.linspace(-domain_size/2, domain_size/2, Nx)
+z = np.linspace(0, z_total, Nz)
+
+# MMI structure parameters:
+z_MMI_start = 50.0    # MMI region begins at z = 50 um
+L_MMI = 40.0          # MMI region length = 40 um
+w_MMI = 40.0          # MMI region width = 40 um
+w_wg = 4.0            # input/output waveguide width = 4 um
+d = 12.0              # center-to-center separation of waveguides = 12 um
+
+# Refractive indices:
+n0 = 1.0      # background
+n_WG = 1.1    # waveguide (input/output) index
+n_MMI = 1.1   # MMI region index (can be different, if desired)
+
+# Generate the refractive index distribution.
+n_r2 = generate_MMI_n_r2(x, z, z_MMI_start, L_MMI, w_MMI, w_wg, d, n_WG, n_MMI, n0)
+
+#%%
+# Plot the refractive index distribution.
+plt.figure(figsize=(8, 6))
+plt.imshow(np.sqrt(n_r2).T, extent=[x[0], x[-1], z[0], z[-1]], origin='lower', aspect='auto', cmap='viridis')
+plt.xlabel("x (um)")
+plt.ylabel("z (um)")
+plt.title("MMI Splitter Refractive Index Distribution (n_r)")
+plt.colorbar(label="n_r")
+plt.show()
 
 
 # %%
