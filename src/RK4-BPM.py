@@ -278,6 +278,7 @@ def slab_mode_source(x, w, n_WG, n0, wavelength, ind_m=0, x0=0):
                 E[i] = np.cos(kx * (w/2)) * np.exp(-kappa * (abs(xp)-w/2))
     else:
         for i, xi in enumerate(x):
+            xp = xi - x0
             if abs(xp) <= w/2:
                 E[i] = np.sin(kx * xp)
             else:
@@ -373,7 +374,7 @@ E = np.zeros((Nx, Nz), dtype=np.complex128)
 
 # waveguide mode
 E[:, 0] = slab_mode_source(x, w=w_wg, n_WG=n_WG, n0=n0,
-    wavelength=wavelength, ind_m=0, x0=d_wg/2)
+    wavelength=wavelength, ind_m=1, x0=d_wg/2)
 
 
 
